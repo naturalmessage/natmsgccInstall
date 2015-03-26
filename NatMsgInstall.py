@@ -34,6 +34,8 @@
 # RPM packages of the distribution.
 
 from urllib import request
+##import http.client #attemp #2
+import ssl #attempt 3
 
 
 import gzip
@@ -57,7 +59,7 @@ url_requests = 'https://github.com/kennethreitz/requests/tarball/master'
 
 url_rncryptor = 'https://github.com/RNCryptor/RNCryptor-python/tarball/master'
 url_pycrypto = 'https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz'
-url_natmsgcc = 'https://github.com/naturalmessage/natmsgcc/archive/master.tar.gz'
+url_natmsgcc='https://github.com/naturalmessage/natmsgcc/archive/master.tar.gz'
 
 # Dependencies for the natmsgv server verification program
 url_libgpg_error = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.17.tar.bz2'
@@ -101,7 +103,33 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	proj_tar = os.path.join(wrk_dir, proj_name + '.tar')
 	proj_targz = proj_tar + '.gz'
 	
-	u = request.urlopen(targz_url)
+	print('downloading ' + targz_url)
+	input('press any key to continue\n')
+	
+	# bob added h and req mar 25, 2015 when github 
+	# had bad ssl according to my FreeBSD VM.
+	##u = request.urlopen(targz_url)
+
+	context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+	context.check_hostname = False
+	context.verify_mode = ssl.CERT_NONE
+	
+	h = request.HTTPSHandler(check_hostname=False)
+	#r = request.Request(targz_url)
+	opener = request.build_opener(h)
+	request.install_opener(opener)
+	#try:
+	u = request.urlopen(targz_url, context=context)
+	#except:
+	#	e = str(sys.exc_info()[0:2])
+	#	print('failed to read https: ' + e)
+	#	return(-1)
+	print('== once test ' + targz_url[8:])
+	# # # url_list = targz_url[8:].split('/')
+	# # # conn = http.client.HTTPSConnection(url_list[0], 443)
+	# # # conn.putrequest('GET', '/' + '/'.join(url_list[1:]))
+	# # # conn.endheaders()
+	# # # u = conn.getresponse()
 	dat = u.read()
 	u.close()
 
@@ -282,7 +310,7 @@ def nm_install_package(package_name, os_name=None,
 		'default': 'python3-dev'},
 	'gcc': {'default': 'gcc'},
 	'python3-setuptools': {'opensuse': 'python3-setuptools', 
-		'freebsd': 'py34-setuptools',
+		'freebsd': 'py34-setuptools34',
 		'default': 'python3-setuptools'},
 	'vim': {'trisquel': 'vim-nox', 'freebsd': 'vim-lite', 'default': 'vim'},
 	'nano': { 'default': 'nano'} }
@@ -349,7 +377,7 @@ def nm_install_package(package_name, os_name=None,
 		# change to debug_msg()
 		print('Initial pacmgr name based on distribution name: ' + str(pacmgr_name))
 	
-	my_paths=['/usr/local/bin', '/opt/local/bin', 
+	my_paths=['/usr/local/bin', '/usr/sbin', '/opt/local/bin', 
 		'/usr/share/bin', '/usr/local/share/pcbsd/bin']
 	defpath = os.defpath.split(':')
 	pacmgr_good = False
@@ -418,13 +446,16 @@ def nm_install_package(package_name, os_name=None,
 		pass
 
 	try:
-		package_list = tmp_d['dist_name']
+		package_list = tmp_d[dist_name]
 	except:
 		try:
 			package_list = tmp_d['default']
 		except:
 			package_list = package_name
 
+	input('=== once, the package info is ' + str(package_list) \
+		+ 'for dict ' + str(tmp_d) + ' and pkg name ' \
+		+ package_name)
 	if not isinstance(package_list, list):
 		package_list = [package_list]
 	
@@ -463,6 +494,7 @@ def main():
 		except:
 			pass
 	else:
+		## Non-Windows
 		try:
 			os.system('clear')
 		except:
@@ -520,7 +552,7 @@ def main():
 				'tmp', 'pycrypto-2.6.1' , 'pycrypto-2.6.1.' + mach + '-py3.' \
 				+ v[1] + '.exe'))
 		else:
-		  print('Error. This version of the install does not now how to ' \
+		  print('Error. This version of NatMsgInstall does not now how to ' \
 			+ 'compile pycrypto beyond Python 3.4.  ' \
 			+ 'You might be able to find a Windows binary for your ' \
 			+ 'version of Python on the Internet, or look for a newer ' \
@@ -531,10 +563,10 @@ def main():
 		if platform.system().lower() != 'windows':
 			print( '==== fixing owner for ' \
 				+ os.path.dirname(dwnld_fname))	
+
 			shutil.chown(os.path.dirname(dwnld_fname),
 				user=pwd.getpwnam(os.getlogin()).pw_uid,
 		    group=pwd.getpwnam(os.getlogin()).pw_gid)
-
 
 		# add test here to see if Crypto is available
 		need_download = False
@@ -589,9 +621,13 @@ def main():
 					 'installation tasks.')
 	else:
 		# non-Windows OS
+		# setuptools is needed before I can run other python installs
+		input('==== once, before setuptools')
+		rc = nm_install_package('python3-setuptools')
+		input('=== return from install was ' + repr(rc))
+
 		nm_install_package('gcc')
 		##nm_install_package('python3') # the exact pkg name is transliate by the func.
-		nm_install_package('python3-setuptools')
 
 
 	########################################################################
@@ -600,11 +636,10 @@ def main():
 	steps = []
 	save_rncryptor_subdir = '' 
 
-	# always download a fresh natmsgcc from github:
-	steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
 
 	# Test if pycrypto is needed:
 	if not platform.system().lower() == 'windows':
+		# NOT Windows
 		need_download = False
 		try:
 			from Crypto.Protocol import KDF
@@ -627,6 +662,10 @@ def main():
 
 			###steps.extend([[wrk_dir, url_requests, 'requests', True, False],
 			###	[wrk_dir, url_rncryptor, 'rncryptor', False, False]])
+
+		# always download a fresh natmsgcc from github, but
+		# install the 'requests' module first.
+		steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
 
 		step_nbr = 1 #1-based step number
 		for opts in steps:
@@ -691,7 +730,7 @@ def main():
 					+ 'owned by the root user ID and might not be accessible to ' \
 					+ 'your regular user ID.  Your login ID is also set to root. ')
 
-				owner_id_alpha = intput('Enter the user ID that you wnat to be ' \
+				owner_id_alpha = input('Enter the user ID that you wnat to be ' \
 					+ 'the owner of your mail directory: ')
 
 				owner_numeric_id = pwd.getpwnam(owner_id_alpha).pw_uid
