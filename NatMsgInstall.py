@@ -305,6 +305,7 @@ def nm_install_package(package_name, os_name=None,
 		'trisquel': 'python3-dev',
 		'ubuntu': 'python3-dev',
 		'debian': 'python3-dev',
+		'freebsd': 'python34',
 	  'gentoo base system': 'dev-lang/python',
   	'gentoo': 'dev-lang/python',
 		'default': 'python3-dev'},
@@ -622,12 +623,16 @@ def main():
 	else:
 		# non-Windows OS
 		# setuptools is needed before I can run other python installs
-		input('==== once, before setuptools')
 		rc = nm_install_package('python3-setuptools')
-		input('=== return from install was ' + repr(rc))
+		if rc != 0:
+			input('The installation of python setuptools failed.  This will adversely affect ' \
+				+ 'installation of the Natural Message command line client.  You can try ' \
+				+ 'to install Python setuptools using your package manager and then rerun ' \
+				+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
 
 		nm_install_package('gcc')
-		##nm_install_package('python3') # the exact pkg name is transliate by the func.
+		nm_install_package('unrtf') # removes rtf code for command line viewing
+		##nm_install_package('python3') # the exact pkg name is transliated by the func.
 
 
 	########################################################################
