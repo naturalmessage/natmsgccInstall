@@ -41,13 +41,16 @@ import ssl #attempt 3
 import gzip
 import os
 import platform
-#import pwd #Nat in Windows by default
 import shutil
 import subprocess
 import sys
 import tarfile
 import zipfile
 import bz2
+
+if platform.system().lower() != 'windows':
+	# load pwd only for non-windows
+	import pwd #Nat in Windows by default
 
 #url_windows_pycrypto_33 = \
 #'http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win32-py3.3.exe'
@@ -626,6 +629,15 @@ def main():
 					 'installation tasks.')
 	else:
 		# non-Windows OS
+		rc = os.system('make -v')
+		if rc != 0:
+			# Trisquel 7 mini did not have make!
+			nm_install_package('make')
+
+		# I need the development version of python with the proper C headers
+		# to compile pycrypto
+		nm_install_package('python3') # the exact pkg name is transliated by the func.
+
 		# setuptools is needed before I can run other python installs
 		rc = nm_install_package('python3-setuptools')
 		if rc != 0:
@@ -636,7 +648,6 @@ def main():
 
 		nm_install_package('gcc')
 		nm_install_package('unrtf') # removes rtf code for command line viewing
-		##nm_install_package('python3') # the exact pkg name is transliated by the func.
 
 
 	########################################################################
