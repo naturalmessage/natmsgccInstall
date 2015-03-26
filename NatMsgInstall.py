@@ -41,7 +41,7 @@ import ssl #attempt 3
 import gzip
 import os
 import platform
-import pwd
+#import pwd #Nat in Windows by default
 import shutil
 import subprocess
 import sys
@@ -118,12 +118,16 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	#r = request.Request(targz_url)
 	opener = request.build_opener(h)
 	request.install_opener(opener)
-	#try:
-	u = request.urlopen(targz_url, context=context)
-	#except:
-	#	e = str(sys.exc_info()[0:2])
-	#	print('failed to read https: ' + e)
-	#	return(-1)
+	try:
+		u = request.urlopen(targz_url, context=context)
+	except:
+		# Windows did not understand the optoin for context:
+		try:
+			u = request.urlopen(targz_url)
+		except:
+			e = str(sys.exc_info()[0:2])
+			print('failed to read https: ' + e)
+			return(-1)
 	print('== once test ' + targz_url[8:])
 	# # # url_list = targz_url[8:].split('/')
 	# # # conn = http.client.HTTPSConnection(url_list[0], 443)
@@ -654,6 +658,8 @@ def main():
 		if need_download:
 			print('I am adding pycrypto to the UNIX setup.')
 			steps.append([wrk_dir, url_pycrypto, 'pycrypto', True, True])
+		else:
+			print('The pycrypto library is already installed.')
 
 		# Test if requests is needed
 		need_download = False
@@ -667,42 +673,46 @@ def main():
 
 			###steps.extend([[wrk_dir, url_requests, 'requests', True, False],
 			###	[wrk_dir, url_rncryptor, 'rncryptor', False, False]])
+		else:
+			print('The Python requests library is already installed.')
 
-		# always download a fresh natmsgcc from github, but
-		# install the 'requests' module first.
-		steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
+	##### now running for all OS
+	# always download a fresh natmsgcc from github, but
+	# install the 'requests' module first.
+	steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
 
-		step_nbr = 1 #1-based step number
-		for opts in steps:
-			err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
-				run_setup=opts[3], run_build=opts[4])
-			if err_nbr != 0:
-				# Error/warning
-				print('WARNING.  There was an error intalling a tar.gz ' \
-				+ 'file: ' + str(err_nbr))
-				junk = input('Press any key to try the next step...')
-				##sys.exit(12)
-			else:
-				if opts[2].lower() == 'rncryptor':
-					save_rncryptor_subdir = proj_subdir
+	print('=== once, the install list is: ' + str(steps))
+	step_nbr = 1 #1-based step number
+	for opts in steps:
+		err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
+			run_setup=opts[3], run_build=opts[4])
+		if err_nbr != 0:
+			# Error/warning
+			print('WARNING.  There was an error intalling a tar.gz ' \
+			+ 'file: ' + str(err_nbr))
+			junk = input('Press any key to try the next step...')
+			##sys.exit(12)
+		else:
+			if opts[2].lower() == 'rncryptor':
+				save_rncryptor_subdir = proj_subdir
 
-			step_nbr += 1
+		step_nbr += 1
 
-		#### I put RNCryptor inside natmsg
-		### # To do: move the file to the official NaturalMessage python directory
-		### # or to its own directory.
-		### # Manually copy RNCryptor to the natmsg directory
-		### rc = -1
-		### src = os.path.join(save_rncryptor_subdir, 'RNCryptor.py')
-		### dst = os.path.join(wrk_dir, 'RNCryptor.py')
-		### ##dst = wrk_dir
-		### 
-		### print('source: ' + src + ' dst: ' + dst)
-		### try:
-		### 	shutil.copy2(src, dst) 
-		### except:
-		### 	print('Error. The final copy failed.  The RNCryptor.py file should ' \
-		### 	+ 'be copied to ' + wrk_dir)
+	#### I put RNCryptor inside natmsg
+	### # To do: move the file to the official NaturalMessage python directory
+	### # or to its own directory.
+	### # Manually copy RNCryptor to the natmsg directory
+	### rc = -1
+	### src = os.path.join(save_rncryptor_subdir, 'RNCryptor.py')
+	### dst = os.path.join(wrk_dir, 'RNCryptor.py')
+	### ##dst = wrk_dir
+	### 
+	### print('source: ' + src + ' dst: ' + dst)
+	### try:
+	### 	shutil.copy2(src, dst) 
+	### except:
+	### 	print('Error. The final copy failed.  The RNCryptor.py file should ' \
+	### 	+ 'be copied to ' + wrk_dir)
 
 
 	###########################################################################
