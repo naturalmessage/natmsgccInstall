@@ -654,7 +654,7 @@ def main():
 		# non-Windows OS
 		###rc = os.system('make -v')
 		###if rc != 0:
-		if dist_name not in ['openbsd']:
+		if platform.system().lower() not in ['openbsd']:
 			# openbsd does not need an install.
 			if not os.path.isfile('/usr/bin/make') and not os.path.isfile('/usr/local/bin/make'):
 			# Trisquel 7 mini did not have make!
@@ -662,7 +662,7 @@ def main():
 
 		# I need the development version of python with the proper C headers
 		# to compile pycrypto
-		if dist_name not in ['openbsd']:
+		if platform.system().lower() not in ['openbsd']:
 			# openbsd does not have a special 'development' version	
 			# of python
 			nm_install_package('python3') # the exact pkg name is transliated by the func.
@@ -788,7 +788,7 @@ def main():
 					+ 'owned by the root user ID and might not be accessible to ' \
 					+ 'your regular user ID.  Your login ID is also set to root. ')
 
-				owner_id_alpha = input('Enter the user ID that you wnat to be ' \
+				owner_id_alpha = input('Enter the user ID that you want to be ' \
 					+ 'the owner of your mail directory: ')
 
 				owner_numeric_id = pwd.getpwnam(owner_id_alpha).pw_uid
