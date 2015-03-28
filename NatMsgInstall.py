@@ -71,6 +71,7 @@ url_requests = 'https://github.com/kennethreitz/requests/tarball/master'
 url_rncryptor = 'https://github.com/RNCryptor/RNCryptor-python/tarball/master'
 url_pycrypto = 'https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.tar.gz'
 url_natmsgcc='https://github.com/naturalmessage/natmsgcc/archive/master.tar.gz'
+url_natmsgccInstall='https://github.com/naturalmessage/natmsgccInstall/archive/master.tar.gz'
 
 # Dependencies for the natmsgv server verification program
 url_libgpg_error = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.18.tar.bz2'
@@ -724,6 +725,9 @@ def main():
 	# always download a fresh natmsgcc from github, but
 	# install the 'requests' module first.
 	steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
+
+	# get the fresh installer to faciliate running the latest install:
+	steps.append([os.curdir, url_natmsgccInstall, 'natmsgccInstall', False, False])
 
 	step_nbr = 1 #1-based step number
 	for opts in steps:
