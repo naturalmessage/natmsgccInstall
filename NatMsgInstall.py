@@ -325,6 +325,7 @@ def nm_install_package(package_name, os_name=None,
 	'gcc': {'default': 'gcc'},
 	'python3-setuptools': {'opensuse': 'python3-setuptools', 
 		'freebsd': 'py34-setuptools34',
+		'openbsd': 'py3-setuptools',
 		'default': 'python3-setuptools'},
 	'vim': {'trisquel': 'vim-nox', 'freebsd': 'vim-lite', 'default': 'vim'},
 	'nano': { 'default': 'nano'} }
@@ -387,6 +388,25 @@ def nm_install_package(package_name, os_name=None,
 	elif dist_name in ['gentoo', 'gentoo base system']:
 		pacmgr_name = 'emerge'
 		
+	if dist_name in ['freebsd', 'openbsd', 'gentoo base system', 'gentoo', 'arch', 'archlinux']:
+		print(os.linesep)
+		print('This program will install several binary packages using a binary package manager')
+		print('such as pkg_add, pkg, emerge, or pacman.')
+		print('If you you do not want to install binary pacakges (if you prefer to install from source)')
+		input('then quit now or press ENTER to continue...')
+
+	if dist_name in ['freebsd']:
+		if os.getenv('PKG_PATH') == '':
+			print('')
+			print('WARNING. The PKG_PATH environment variable is not set.')
+			print('This might cause the pkg_add command to fail.')
+			print('You could try setting the variable and then restarting')
+			print('this program:')
+			print('   export  PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/`machine -a`/')
+			print('or you could try to continue to see what happens.')
+			input('Press Ctl-c to quit or ENTER to continue...')
+		
+
 	if verbosity > 3:
 		# change to debug_msg()
 		print('Initial pacmgr name based on distribution name: ' + str(pacmgr_name))
@@ -519,7 +539,7 @@ def main():
 			print('Or maybe type su<ENTER> and then run your original command')
 			print('or type sudo su<ENTER> then run your original command.')
 			print('')
-			print('You may Press any key to continue without being root, or ' \
+			print('You may Press ENTER to continue without being root, or ' \
 				+ 'press q to quit.')
 			answ = input(': ')
 			if answ.lower() == 'q':
@@ -628,18 +648,24 @@ def main():
 					+ 'python-3-4-on-windows-7-64bit/')
 				print('Download binaries: ' \
 					+ 'https://www.dropbox.com/s/n6rckn0k6u4nqke/pycrypto-2.6.1.zip?dl=0')
-				junk = input('Press any key to try to continue with the other ' \
+				junk = input('Press ENTER to try to continue with the other ' \
 					 'installation tasks.')
 	else:
 		# non-Windows OS
-		rc = os.system('make -v')
-		if rc != 0:
+		###rc = os.system('make -v')
+		###if rc != 0:
+		if dist_name not in ['openbsd']:
+			# openbsd does not need an install.
+			if not os.path.isfile('/usr/bin/make') and not os.path.isfile('/usr/local/bin/make'):
 			# Trisquel 7 mini did not have make!
-			nm_install_package('make')
+				nm_install_package('make')
 
 		# I need the development version of python with the proper C headers
 		# to compile pycrypto
-		nm_install_package('python3') # the exact pkg name is transliated by the func.
+		if dist_name not in ['openbsd']:
+			# openbsd does not have a special 'development' version	
+			# of python
+			nm_install_package('python3') # the exact pkg name is transliated by the func.
 
 		# setuptools is needed before I can run other python installs
 		rc = nm_install_package('python3-setuptools')
@@ -650,8 +676,11 @@ def main():
 				+ 'to install Python setuptools using your package manager and then rerun ' \
 				+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
 
-		nm_install_package('gcc')
-		nm_install_package('unrtf') # removes rtf code for command line viewing
+		if not os.path.isfile('/usr/bin/gcc') and not os.path.isfile('/usr/local/bin/gcc'):
+			nm_install_package('gcc')
+
+		if not os.path.isfile('/usr/bin/unrtf') and not os.path.isfile('/usr/local/bin/unrtf'):
+			nm_install_package('unrtf') # removes rtf code for command line viewing
 
 
 	########################################################################
@@ -704,7 +733,7 @@ def main():
 			# Error/warning
 			print('WARNING.  There was an error intalling a tar.gz ' \
 			+ 'file: ' + str(err_nbr))
-			junk = input('Press any key to try the next step...')
+			junk = input('Press ENTER to try the next step...')
 			##sys.exit(12)
 		else:
 			if opts[2].lower() == 'rncryptor':
