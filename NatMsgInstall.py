@@ -1,5 +1,13 @@
 # This is an installation program that will download everything for
 # the natural message command line client and attempt to install it.
+#
+# This file can be retrieved from:
+# http://raw.githubusercontent.com/naturalmessage/natmsgccInstall/master/NatMsgInstall.py
+#
+# Author: Robert E. Hoot
+# License: GPL3
+# see the licence file that comes with this distribution.
+#
 # This might not work on every installation because
 # part of this process includes downloading packages through
 # the package manger (e.g., yum, apt-get, zypper, pkg...),
@@ -65,10 +73,10 @@ url_pycrypto = 'https://ftp.dlitz.net/pub/dlitz/crypto/pycrypto/pycrypto-2.6.1.t
 url_natmsgcc='https://github.com/naturalmessage/natmsgcc/archive/master.tar.gz'
 
 # Dependencies for the natmsgv server verification program
-url_libgpg_error = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.17.tar.bz2'
-url_libgpg_error_sig = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.17.tar.bz2.sig'
-url_libgcrypt = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.2.tar.bz2'
-url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.2.tar.bz2.sig'
+url_libgpg_error = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.18.tar.bz2'
+url_libgpg_error_sig = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.18.tar.bz2.sig'
+url_libgcrypt = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2'
+url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2.sig'
 
 ########################################################################
 def install_targz_py(wrk_dir, targz_url, proj_name, 
@@ -107,7 +115,6 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	proj_targz = proj_tar + '.gz'
 	
 	print('downloading ' + targz_url)
-	input('press any key to continue\n')
 	
 	# bob added h and req mar 25, 2015 when github 
 	# had bad ssl according to my FreeBSD VM.
@@ -131,7 +138,6 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 			e = str(sys.exc_info()[0:2])
 			print('failed to read https: ' + e)
 			return(-1)
-	print('== once test ' + targz_url[8:])
 	# # # url_list = targz_url[8:].split('/')
 	# # # conn = http.client.HTTPSConnection(url_list[0], 443)
 	# # # conn.putrequest('GET', '/' + '/'.join(url_list[1:]))
@@ -282,7 +288,7 @@ def download_tar_bz2(wrk_dir, tarbz_url ):
 
 def nm_install_package(package_name, os_name=None, 
 	os_version=None, package_manger_path=None,
-	verbosity=5):
+	verbosity=2):
 	"""nm_install_package(package, os_name=None, os_version=None)
 	
 	This is an attempt to install a package on a UNIX-like
@@ -461,9 +467,6 @@ def nm_install_package(package_name, os_name=None,
 		except:
 			package_list = package_name
 
-	input('=== once, the package info is ' + str(package_list) \
-		+ 'for dict ' + str(tmp_d) + ' and pkg name ' \
-		+ package_name)
 	if not isinstance(package_list, list):
 		package_list = [package_list]
 	
@@ -641,7 +644,8 @@ def main():
 		# setuptools is needed before I can run other python installs
 		rc = nm_install_package('python3-setuptools')
 		if rc != 0:
-			input('The installation of python setuptools failed.  This will adversely affect ' \
+			input('The installation of python setuptools failed.  This will ' \
+				+ 'adversely affect ' \
 				+ 'installation of the Natural Message command line client.  You can try ' \
 				+ 'to install Python setuptools using your package manager and then rerun ' \
 				+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
@@ -692,7 +696,6 @@ def main():
 	# install the 'requests' module first.
 	steps.append([wrk_dir, url_natmsgcc, 'natmsgcc', True, False])
 
-	print('=== once, the install list is: ' + str(steps))
 	step_nbr = 1 #1-based step number
 	for opts in steps:
 		err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
@@ -803,15 +806,17 @@ def main():
 				# configure
 				### cd proj_dir
 				print('Configuring libgpg_error...')
-				pid = subprocess.Popen(['./configure', '--enable-static', '--disable-shared',
-					'--prefix=/usr/local'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+				pid = subprocess.Popen(['./configure', '--enable-static', 
+					'--disable-shared', '--prefix=/usr/local'], 
+					stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
 					stderr=subprocess.PIPE, cwd=proj_dir)
 			
 				sout, serr = pid.communicate()
 			
 				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgpg_error. You might ')
-					print('need to install a dependency.')
+					print('Error.  There was an error while configuring libgpg_error. ' \
+						+ 'You might need to install a dependency.')
+					print('It is generally safe to rerun this install script.')
 					if serr is not None:
 						input('Press a key to see stderr error message...')
 						print(str(serr))
@@ -858,15 +863,22 @@ def main():
 				# configure
 				### cd proj_dir
 				print('Configuring libgcrypt...')
-				pid = subprocess.Popen(['./configure', '--enable-static', '--disable-shared',
-					'--prefix=/usr/local'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+				# The next command defines the command and gets an id
+				# for it.
+				pid = subprocess.Popen(['./configure', '--enable-static', 
+					'--disable-shared',
+					'--with-gpg-error-prefix=/usr/local',
+					'--prefix=/usr/local'], 
+					stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
 					stderr=subprocess.PIPE, cwd=proj_dir)
 			
+				# The next command actually gets the output from
+				# the command:
 				sout, serr = pid.communicate()
 			
 				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgpgcrypt. You might ')
-					print('need to install a dependency.')
+					print('Error.  There was an error while configuring libgpgcrypt. ' \
+						+ ' You might need to install a dependency.')
 					if serr is not None:
 						input('Press a key to see stderr error message...')
 						print(str(serr))
@@ -880,8 +892,7 @@ def main():
 			
 				sout, serr = pid.communicate()
 				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgcrypt. You might ')
-					print('need to install a dependency.')
+					print('Error.  There was an error while making libgcrypt.')
 					if serr is not None:
 						input('Press a key to see stderr error message...')
 						print(str(serr))

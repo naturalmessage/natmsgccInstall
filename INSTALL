@@ -1,0 +1,59 @@
+This program is an installer that runs with Python 3 to install the Natural 
+Message Command-line Client (natmsgcc).
+
+This is being tested for Windows and UNIX-like operating systems other that Mac
+OS X.  There is a GUI application for Mac OS X that will be available for use
+soon.
+
+The server verification process is not currently working on Windows due to
+compiling problems.  If you have tips on how to comple the C programs in
+https://github.com/naturalmessage/natmsgv, contact me a
+naturalmessage@fastmail.nl or use the Natural Message client and my contact ID
+that comes with the installation.  If there is a compile problem on your OS,
+server verification won't work either.  The server verification process is
+currently not implemented, but will be implemented soon.
+
+Installation of this program and the Natural Message Command-line Client:
+
+ 1) Download the python program using one of these methods:
+    A) use a web browser to go to:
+
+      https://github.com/naturalmessage/natmsgccInstall
+
+      and either download the zip file or click NatMsgInstall.py and then
+      on the next page click 'raw' and download the python code directly.
+
+		B) from the command line:
+
+    wget https://raw.githubusercontent.com/naturalmessage/natmsgccInstall/master/NatMsgInstall.py
+
+    curl -L https://raw.githubusercontent.com/naturalmessage/natmsgccInstall/master/NatMsgInstall.py
+
+ 2) Install Python 3x if you don't already have it.  If you are using Windows,
+    you have to install Python 3.4 or a lower version of 3.4 or else you will
+    have to find your own compiled binaries for pycrypto.
+    For Windows, be sure to add Python to the search path.
+
+ 3) Run the NatMsgInstall.py program using Python 3 with root privileges. 
+      For Windows, open a command prompt, use the 'cd' command to navigate to 
+      where you downloaded the NatMsgInstall.py file, and run:
+
+        python NatMsgInstall.py
+     
+      For UNIX-like OS, run:
+        sudo python3 NatMsgInstall.py
+
+      or on some systems it might be something like:
+
+        sudo /usr/local/bin/python3 NatMsgInstall.py
+
+  4) This is not fully tested yet, but even after it is tested it will work
+     only if the script can determine your package manager (yum, apt-get,
+     pkg, etc.) and if it knows the exact name of packages on your system
+     (including packages for Python setuptools, gcc, and maybe a couple others).
+
+  5) It might be nice to install an unrtf program if you can (a program that
+     remove RTF code so that RTF documents can be displayed as plain text.
+
+
+
