@@ -286,6 +286,37 @@ def download_tar_bz2(wrk_dir, tarbz_url ):
 	return((0, proj_subdir))
 
 ########################################################################
+def get_dist_name():
+	"""
+	This will return either the system name or, it the system is linux,
+	the linux distribution name... always in lower case.
+
+	On error, this returns None
+	"""
+	dist_name = ''
+	pacmgr_list = ['yum', 'apt-get', 'pkg_add', 
+		'zypper', 'dpkg', 'brew', 'emerge', 'pkg', 'ipkg']
+
+	if platform.system().lower() == 'windows':
+		dist_name = 'windows'
+	elif platform.system().lower() in ['bsd', 'freebsd', 'openbsd']:
+		dist_name = platform.system().lower().strip()
+	elif platform.system().lower() == 'linux':
+		# I might need to add version number here.
+		# There was trailing whitespace, so I added 'strip()'
+		dist_name = platform.linux_distribution()[0].lower().strip() 
+	elif platform.system().lower() == 'darwin':
+		dist_name = 'darwin'
+	elif platform.system().lower().find('bsd') >= 0:
+		dist_name = platform.system().lower().strip()
+	else: 
+		print('unexpected system type (in brackets): <' + platform.system() + '>.')
+		return(None)
+
+	return(dist_name)
+
+########################################################################
+
 
 def nm_install_package(package_name, os_name=None, 
 	os_version=None, package_manger_path=None,
@@ -346,24 +377,24 @@ def nm_install_package(package_name, os_name=None,
 	## >>> platform.linux_distribution()
 	## ('openSUSE ', '13.2', 'i586')
 
-	dist_name = ''
 	pacmgr_list = ['yum', 'apt-get', 'pkg_add', 
 		'zypper', 'dpkg', 'brew', 'emerge', 'pkg', 'ipkg']
 
-	if platform.system().lower() == 'windows':
+	dist_name = get_dist_name()
+
+	if dist_name is None:
+		print('Error. Unexpected system type.  This will probably work only if the system ' \
+			+ 'name or Linux distribution name has been coded into this program, but you ' \
+			+ 'could try to set the dist_name to something similar to what it is (e.g., ' \
+			+ 'if your system is a derivative of debian, enter "debian" without the quotes).')
+		dist_name = input('Enter Ctl-c to quit or enter a distribution name if you want ' \
+			+ 'to attempt to continue (examples: debian, fedora, opensuse, freebsd, centos ' \
+			+ 'linux, openbsd): ').lower()
+		
+
+	if dist_name == 'windows':
 		print('Error. I can not install on Windows.')
 		return(453)
-	elif platform.system().lower() in ['bsd', 'freebsd', 'openbsd']:
-		dist_name = platform.system().lower().strip()
-	elif platform.system().lower() == 'linux':
-		# I might need to add version number here.
-		# There was trailing whitespace, so I added 'strip()'
-		dist_name = platform.linux_distribution()[0].lower().strip() 
-	elif platform.system().lower() == 'darwin':
-		dist_name = 'darwin'
-	else: 
-		print('unexpected system type (in brackets): <' + platform.system() + '>.')
-		return(454)
 
 
 	if verbosity > 3:
