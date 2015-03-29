@@ -149,7 +149,7 @@ fi
 ############################################################
 echo "Installing setuptools (ez_setup) from source"
 echo "because Cent OS 7 does not have an RPM for it."
-wget https://bootstrap.pypa.io/ez_setup.py -O -
+wget https://bootstrap.pypa.io/ez_setup.py 
 python3 ez_setup.py
 ############################################################
 ############################################################
