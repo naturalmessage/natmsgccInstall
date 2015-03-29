@@ -354,7 +354,7 @@ def nm_install_package(package_name, os_name=None,
 		print('Error. I can not install on Windows.')
 		return(453)
 	elif platform.system().lower() in ['bsd', 'freebsd', 'openbsd']:
-		dist_name = platform.system().lower()
+		dist_name = platform.system().lower().strip()
 	elif platform.system().lower() == 'linux':
 		# I might need to add version number here.
 		# There was trailing whitespace, so I added 'strip()'
@@ -376,17 +376,21 @@ def nm_install_package(package_name, os_name=None,
 	elif dist_name == 'darwin':
 		# darwin = Mac OS X, and most people do not have homebrew
 		pacmgr_name = 'brew'
-	elif dist_name in ['fedora', 'red hat', 'redhat', 'centos']:
+	elif dist_name.find('fedora') >= 0  or dist_name.find('centos') >= 0 \
+	or dist_name.find('redhat') >= 0  or dist_name.find('red hat') >= 0 :
 		pacmgr_name = 'yum'
-	elif dist_name in ['ubuntu', 'mint', 'linuxmint', 'debian', 'trisquel']:
+	elif dist_name.find('ubuntu') >= 0 or dist_name.find('mint') >= 0 \
+	or dist_name.find('debian') >= 0 or dist_name.find('trisquel') >= 0:
 		pacmgr_name = 'apt-get'
 	elif dist_name in ['openbsd']:
 		pacmgr_name = 'pkg_add'
-	elif dist_name in ['bsd', 'freebsd']:
+	elif dist_name in ['freebsd']:
 		pacmgr_name = 'pkg'
-	elif dist_name in ['archlinux', 'arch']:
+	elif dist_name.find('bsd') >= 0:
+		pacmgr_name = 'pkg'
+	elif dist_name.find('arch') >= 0:
 		pacmgr_name = 'pacman'
-	elif dist_name in ['gentoo', 'gentoo base system']:
+	elif dist_name.find('gentoo') >= 0 :
 		pacmgr_name = 'emerge'
 		
 	if dist_name in ['freebsd', 'openbsd', 'gentoo base system', 'gentoo', 'arch', 'archlinux']:
@@ -397,7 +401,7 @@ def nm_install_package(package_name, os_name=None,
 		input('then quit now or press ENTER to continue...')
 
 	if dist_name in ['freebsd']:
-		if os.getenv('PKG_PATH') == '':
+		if os.getenv('PKG_PATH') is None:
 			print('')
 			print('WARNING. The PKG_PATH environment variable is not set.')
 			print('This might cause the pkg_add command to fail.')
