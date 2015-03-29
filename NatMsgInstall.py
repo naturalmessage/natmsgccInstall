@@ -1,8 +1,13 @@
 # This is an installation program that will download everything for
-# the natural message command line client and attempt to install it.
+# the Natural Message Commandline Client and attempt to install it.
 #
 # This file can be retrieved from:
 # http://raw.githubusercontent.com/naturalmessage/natmsgccInstall/master/NatMsgInstall.py
+#
+# The full package, including a special setup tool for Cent OS 7 is:
+# https://github.com/naturalmessage/natmsgccInstall/archive/master.tar.gz
+#  OR:
+# https://github.com/naturalmessage/natmsgccInstall/archive/master.zip
 #
 # Author: Robert E. Hoot
 # License: GPL3
@@ -690,7 +695,8 @@ def main():
 		# non-Windows OS
 		###rc = os.system('make -v')
 		###if rc != 0:
-		if platform.system().lower() not in ['openbsd']:
+		dist_name = get_dist_name()
+		if dist_name not in ['openbsd']:
 			# openbsd does not need an install.
 			if not os.path.isfile('/usr/bin/make') and not os.path.isfile('/usr/local/bin/make'):
 			# Trisquel 7 mini did not have make!
@@ -698,19 +704,39 @@ def main():
 
 		# I need the development version of python with the proper C headers
 		# to compile pycrypto
-		if platform.system().lower() not in ['openbsd']:
+		if dist_name not in ['openbsd']:
 			# openbsd does not have a special 'development' version	
 			# of python
 			nm_install_package('python3') # the exact pkg name is transliated by the func.
 
 		# setuptools is needed before I can run other python installs
-		rc = nm_install_package('python3-setuptools')
-		if rc != 0:
-			input('The installation of python setuptools failed.  This will ' \
-				+ 'adversely affect ' \
-				+ 'installation of the Natural Message command line client.  You can try ' \
-				+ 'to install Python setuptools using your package manager and then rerun ' \
-				+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
+		need_download = False
+		try:
+			import setuptools
+		except:
+			need_download = True
+
+		if need_download:
+			if dist_name in ['centos linux']:
+				# verify that setuptools is available. For Cent OS 7, there is
+				# a custom setup script in the github repo for this program,
+				# and it should install setuptools from source.
+				print('Error. You do not have setuptools, and there is no binary')
+				print('RPM for Python 3 setuptools in Cent OS 7. You should have')
+				print('already run the NatMsgccSetupCentOS7.sh script in: ')
+				print('  https://github.com/naturalmessage/natmsgccInstall/archive/master.zip')
+				print('That script installs Python 3, dependencies, and setuptools')
+				print('from source.')
+				input('Press ENTER to exit...')
+				sys.exit(12)
+			else:
+				rc = nm_install_package('python3-setuptools')
+				if rc != 0:
+					input('The installation of python setuptools failed.  This will ' \
+						+ 'adversely affect ' \
+						+ 'installation of the Natural Message command line client.  You can try ' \
+						+ 'to install Python setuptools using your package manager and then rerun ' \
+						+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
 
 		if not os.path.isfile('/usr/bin/gcc') and not os.path.isfile('/usr/local/bin/gcc'):
 			nm_install_package('gcc')
