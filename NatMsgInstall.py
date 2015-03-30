@@ -88,6 +88,50 @@ url_libgpg_error_sig = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.1
 url_libgcrypt = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2'
 url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2.sig'
 
+
+
+
+######################################################################
+def https_download(the_url):
+	"""
+	Read a https web page and return the content.
+
+	This errs on the side of downloading the file without
+	verifying the certificate due to problems on some systems
+	dealing with certificates.  I might add an option
+	in the future to prompt the user to continue with a bad
+	cert.
+	"""
+	dat = None
+	if ssl.OPENSSL_VERSION_INFO[0] == 1:
+		if ssl.OPENSSL_VERSION_INFO[1] == 0:
+			if ssl.OPENSSL_VERSION_INFO[2] == 1:
+				if ssl.OPENSSL_VERSION_INFO[3] < 10:
+					print('OpenSSL might be out of date: ' + ssl.OPENSSL_VERSION)
+					input('Press ENTER to continue...')
+
+	context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+	context.check_hostname = False
+	context.verify_mode = ssl.CERT_NONE
+	
+	h = request.HTTPSHandler(check_hostname=False)
+	opener = request.build_opener(h)
+	request.install_opener(opener)
+	try:
+		u = request.urlopen(the_url, context=context)
+	except:
+		# Windows did not understand the option for context:
+		try:
+			u = request.urlopen(the_url)
+		except:
+			e = str(sys.exc_info()[0:2])
+			print('failed to read https: ' + e)
+			return(None)
+	dat = u.read()
+	u.close()
+
+	return(dat)
+
 ########################################################################
 def install_targz_py(wrk_dir, targz_url, proj_name, 
 	run_setup=True, run_build=False):
@@ -130,31 +174,38 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	# had bad ssl according to my FreeBSD VM.
 	##u = request.urlopen(targz_url)
 
-	context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-	context.check_hostname = False
-	context.verify_mode = ssl.CERT_NONE
-	
-	h = request.HTTPSHandler(check_hostname=False)
-	#r = request.Request(targz_url)
-	opener = request.build_opener(h)
-	request.install_opener(opener)
-	try:
-		u = request.urlopen(targz_url, context=context)
-	except:
-		# Windows did not understand the optoin for context:
-		try:
-			u = request.urlopen(targz_url)
-		except:
-			e = str(sys.exc_info()[0:2])
-			print('failed to read https: ' + e)
-			return(-1)
-	# # # url_list = targz_url[8:].split('/')
-	# # # conn = http.client.HTTPSConnection(url_list[0], 443)
-	# # # conn.putrequest('GET', '/' + '/'.join(url_list[1:]))
-	# # # conn.endheaders()
-	# # # u = conn.getresponse()
-	dat = u.read()
-	u.close()
+	print('once test')
+	dat = https_download(targz_url)
+	print('once test B')
+	#### context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+	#### context.check_hostname = False
+	#### context.verify_mode = ssl.CERT_NONE
+	#### 
+	#### h = request.HTTPSHandler(check_hostname=False)
+	#### #r = request.Request(targz_url)
+	#### opener = request.build_opener(h)
+	#### request.install_opener(opener)
+	#### try:
+	#### 	u = request.urlopen(targz_url, context=context)
+	#### except:
+	#### 	# Windows did not understand the option for context:
+	#### 	try:
+	#### 		u = request.urlopen(targz_url)
+	#### 	except:
+	#### 		e = str(sys.exc_info()[0:2])
+	#### 		print('failed to read https: ' + e)
+	#### 		return(-1)
+	#### # # # url_list = targz_url[8:].split('/')
+	#### # # # conn = http.client.HTTPSConnection(url_list[0], 443)
+	#### # # # conn.putrequest('GET', '/' + '/'.join(url_list[1:]))
+	#### # # # conn.endheaders()
+	#### # # # u = conn.getresponse()
+	#### dat = u.read()
+	#### u.close()
+
+	if dat is None:
+		print('failed to fetch ' + targz_url)
+		return((8234, None))
 
 	# unzip the main file and write to the .tar file:
 	fd_requests = open(proj_tar, 'wb')
@@ -304,8 +355,6 @@ def get_dist_name():
 	On error, this returns the tuple (None, None)
 	"""
 	dist_name = ''
-	pacmgr_list = ['yum', 'apt-get', 'pkg', 'urpmi', 'pkg_add', 
-		'zypper', 'dpkg', 'brew', 'emerge', 'dnf', 'ipkg']
 
 	release = platform.release().split('.')[0]
 	if platform.system().lower() == 'windows':
@@ -317,7 +366,7 @@ def get_dist_name():
 		# There was trailing whitespace, so I added 'strip()'
 		d = platform.linux_distribution()[0].lower()
 		if d.find('mageia') >= 0:
-			dist_name= 'mageai'
+			dist_name= 'mageia'
 		elif d.find('centos') >= 0:
 			dist_name = 'centos'
 		elif d.find('fedora') >= 0:
@@ -399,8 +448,9 @@ def nm_install_package(package_name, os_name=None,
 	## >>> platform.linux_distribution()
 	## ('openSUSE ', '13.2', 'i586')
 
-	pacmgr_list = ['yum', 'apt-get', 'pkg_add', 
-		'zypper', 'dpkg', 'brew', 'emerge', 'pkg', 'ipkg']
+
+	pacmgr_list = ['yum', 'apt-get', 'pkg', 'urpmi', 'pkg_add', 
+		'zypper', 'dpkg', 'brew', 'emerge', 'dnf', 'ipkg']
 
 	dist_name, release = get_dist_name()
 
@@ -432,6 +482,8 @@ def nm_install_package(package_name, os_name=None,
 	elif dist_name.find('fedora') >= 0  or dist_name.find('centos') >= 0 \
 	or dist_name.find('redhat') >= 0  or dist_name.find('red hat') >= 0 :
 		pacmgr_name = 'yum'
+	elif dist_name.find('mageia') >= 0  or dist_name.find('mandriva') >= 0 :
+		pacmgr_name = 'urpmi'
 	elif dist_name.find('ubuntu') >= 0 or dist_name.find('mint') >= 0 \
 	or dist_name.find('debian') >= 0 or dist_name.find('trisquel') >= 0:
 		pacmgr_name = 'apt-get'
@@ -764,6 +816,31 @@ def main():
 				print('from source.')
 				input('Press ENTER to exit...')
 				sys.exit(12)
+			elif dist_name in ['mageia', 'mandriva']:
+				print("Installing setuptools (ez_setup) from source")
+				print("because Mageia does not have an RPM for it.")
+				##wget https://bootstrap.pypa.io/ez_setup.py
+				dat = https_download(the_url='https://bootstrap.pypa.io/ez_setup.py')
+				if dat is None:
+					print('failed to install setuptools.  The other installs will')
+					print('probably fail.')
+					return(234234)
+
+				# this writes to the current directory,
+				# which is probably ok, but a temp dire would be better.
+				with open('ez_setup.py', 'w') as fd:
+					fd.write(dat.decode('utf-8'))
+
+				try:
+					import ez_setup
+				except:
+					print('failed to run setuptools installer.  The other installs will')
+					print('probably fail.')
+					return(87878787)
+				else:
+					ez_setup.main()
+					
+
 			else:
 				rc = nm_install_package('python3-setuptools')
 				if rc != 0:
