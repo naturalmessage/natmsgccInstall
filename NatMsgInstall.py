@@ -334,7 +334,7 @@ def get_dist_name():
 		print('unexpected system type (in brackets): <' + platform.system() + '>.')
 		return((None, None))
 
-	return((dist_name, release)
+	return((dist_name, release))
 
 ########################################################################
 
@@ -623,13 +623,21 @@ def main():
 		# (as opposed to getting 'root'), then I translate that
 		# into a numeric user id using the pwd module (because
 		# chown wants numeric uid).
-		print('==== fixing owner for ' + wrk_dir)	
-		shutil.chown(wrk_dir, 
-			user=pwd.getpwnam(os.getlogin()).pw_uid,
-			group=pwd.getpwnam(os.getlogin()).pw_gid)
-		shutil.chown(os.path.expanduser(os.path.join('~', 'natmsg')), 
-			user=pwd.getpwnam(os.getlogin()).pw_uid,
-			group=pwd.getpwnam(os.getlogin()).pw_gid)
+		user=None
+		try:
+			# getlogin failed for mageia with a manually-created user ID
+			user=pwd.getpwnam(os.getlogin()).pw_uid
+		except:
+			print('Note: unable to change the owner for ' + wrk_dir)
+			print('You can change it yourself with the chown command later.')
+		else:
+			print('==== fixing owner for ' + wrk_dir)	
+			shutil.chown(wrk_dir, 
+				user=pwd.getpwnam(os.getlogin()).pw_uid,
+				group=pwd.getpwnam(os.getlogin()).pw_gid)
+			shutil.chown(os.path.expanduser(os.path.join('~', 'natmsg')), 
+				user=pwd.getpwnam(os.getlogin()).pw_uid,
+				group=pwd.getpwnam(os.getlogin()).pw_gid)
 		
 
 
