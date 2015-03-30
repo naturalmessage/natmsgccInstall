@@ -1,6 +1,15 @@
 This program is an installer that runs with Python 3 to install the Natural 
 Message Command-line Client (natmsgcc).
 
+Some operating systems require more preparatory work than others:
+  1) CentOS 7: use the setup script that comes with this package:
+    NatMsgccSetupCentOS7.sh
+  2) Mageia (and maybe Mandrake)
+     The default behavior would be to insert your install disk,
+     then try the following from the teriminal prompt:
+       urpmi --auto-select
+       urpmi python3
+
 This is being tested for Windows and UNIX-like operating systems other that Mac
 OS X.  There is a GUI application for Mac OS X that will be available for use
 soon.

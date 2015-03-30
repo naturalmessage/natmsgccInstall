@@ -1,6 +1,10 @@
 # This is an installation program that will download everything for
 # the Natural Message Commandline Client and attempt to install it.
 #
+# TEMP NOTE: gcc on freebsd was named gcc48, and the version will change
+# frequently.
+# freebsd during compile, could not find libintl_dgettext.. from gettext?
+#
 # This file can be retrieved from:
 # http://raw.githubusercontent.com/naturalmessage/natmsgccInstall/master/NatMsgInstall.py
 #
@@ -293,32 +297,44 @@ def download_tar_bz2(wrk_dir, tarbz_url ):
 ########################################################################
 def get_dist_name():
 	"""
-	This will return either the system name or, it the system is linux,
+	This will return a tuple with distribution name and release number.
+	For linux, this returns the distribution name.
 	the linux distribution name... always in lower case.
 
-	On error, this returns None
+	On error, this returns the tuple (None, None)
 	"""
 	dist_name = ''
-	pacmgr_list = ['yum', 'apt-get', 'pkg_add', 
-		'zypper', 'dpkg', 'brew', 'emerge', 'pkg', 'ipkg']
+	pacmgr_list = ['yum', 'apt-get', 'pkg', 'urpmi', 'pkg_add', 
+		'zypper', 'dpkg', 'brew', 'emerge', 'dnf', 'ipkg']
 
+	release = platform.release().split('.')[0]
 	if platform.system().lower() == 'windows':
 		dist_name = 'windows'
 	elif platform.system().lower() in ['bsd', 'freebsd', 'openbsd']:
 		dist_name = platform.system().lower().strip()
-	elif platform.system().lower() == 'linux':
+	elif platform.system().lower().find('linux') >= 0:
 		# I might need to add version number here.
 		# There was trailing whitespace, so I added 'strip()'
-		dist_name = platform.linux_distribution()[0].lower().strip() 
+		d = platform.linux_distribution()[0].lower()
+		if d.find('mageia') >= 0:
+			dist_name= 'mageai'
+		elif d.find('centos') >= 0:
+			dist_name = 'centos'
+		elif d.find('fedora') >= 0:
+			dist_name = 'fedora'
+		elif d.find('ubuntu') >= 0:
+			dis_name = 'ubuntu'
+		else:
+			dist_name = platform.linux_distribution()[0].lower().strip() 
 	elif platform.system().lower() == 'darwin':
 		dist_name = 'darwin'
 	elif platform.system().lower().find('bsd') >= 0:
 		dist_name = platform.system().lower().strip()
 	else: 
 		print('unexpected system type (in brackets): <' + platform.system() + '>.')
-		return(None)
+		return((None, None))
 
-	return(dist_name)
+	return((dist_name, release)
 
 ########################################################################
 
@@ -354,6 +370,7 @@ def nm_install_package(package_name, os_name=None,
 	'python3': {'opensuse': 'python3-devel', 
 		'trisquel': 'python3-dev',
 		'ubuntu': 'python3-dev',
+		'fedora': 'python3-devel',
 		'debian': 'python3-dev',
 		'freebsd': 'python34',
 	  'gentoo base system': 'dev-lang/python',
@@ -385,7 +402,7 @@ def nm_install_package(package_name, os_name=None,
 	pacmgr_list = ['yum', 'apt-get', 'pkg_add', 
 		'zypper', 'dpkg', 'brew', 'emerge', 'pkg', 'ipkg']
 
-	dist_name = get_dist_name()
+	dist_name, release = get_dist_name()
 
 	if dist_name is None:
 		print('Error. Unexpected system type.  This will probably work only if the system ' \
@@ -421,7 +438,11 @@ def nm_install_package(package_name, os_name=None,
 	elif dist_name in ['openbsd']:
 		pacmgr_name = 'pkg_add'
 	elif dist_name in ['freebsd']:
-		pacmgr_name = 'pkg'
+		if release >= '10':
+			pacmgr_name = 'pkg'
+		else:
+			pacmgr_name = 'pkg_add'
+
 	elif dist_name.find('bsd') >= 0:
 		pacmgr_name = 'pkg'
 	elif dist_name.find('arch') >= 0:
@@ -541,6 +562,12 @@ def nm_install_package(package_name, os_name=None,
 			install_cmd = '-S'
 
 		if os.path.basename(pacmgr_path) == 'emerge':
+			install_cmd = ''
+
+		if os.path.basename(pacmgr_path) == 'pkg_add':
+			install_cmd = ''
+
+		if os.path.basename(pacmgr_path) == 'urpmi':
 			install_cmd = ''
 
 		pid = subprocess.Popen([pacmgr_path, install_cmd, p])
@@ -695,7 +722,7 @@ def main():
 		# non-Windows OS
 		###rc = os.system('make -v')
 		###if rc != 0:
-		dist_name = get_dist_name()
+		dist_name, release = get_dist_name()
 		if dist_name not in ['openbsd']:
 			# openbsd does not need an install.
 			if not os.path.isfile('/usr/bin/make') and not os.path.isfile('/usr/local/bin/make'):
