@@ -88,6 +88,8 @@ url_libgpg_error_sig = 'ftp://ftp.gnupg.org/gcrypt/libgpg-error/libgpg-error-1.1
 url_libgcrypt = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2'
 url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz2.sig'
 
+url_natmsgv_gz = 'https://github.com/naturalmessage/natmsgv/archive/master.tar.gz'
+
 
 
 
@@ -998,8 +1000,8 @@ def main():
 	if platform.system().lower() != 'windows':
 		#####  CONTINUING FOR NON-WINDOWS ONLY...                  ####
 		#####  Download, configure, make, and install libgpg-error ####
-		if os.path.isfile('/usr/local/bin/libgpg-error'):
-			print('WARNING. You already have /usr/local/bin/libgpg-error.')
+		if os.path.isfile('/usr/local/lib/libgpg-error.a'):
+			print('WARNING. You already have /usr/local/lib/libgpg-error.a.')
 			print('I will not recompile that out of fear of putting the ')
 			print('the wrong version of GPG on your system.')
 			print('If you really want to recompile GPG, you can do so')
@@ -1055,8 +1057,8 @@ def main():
 					print('Skipping the final installation for libgpg-error.')
 			
 		#####  Download, configure, make, and install libgcrypt ####
-		if os.path.isfile('/usr/local/bin/libgcrypt'):
-			print('WARNING. You already have /usr/local/bin/libgcrypt.')
+		if os.path.isfile('/usr/local/lib/libgcrypt.a'):
+			print('WARNING. You already have /usr/local/lib/libgcrypt.a.')
 			print('I will not recompile that out of fear of putting the ')
 			print('the wrong version of GPG on your system.')
 			print('If you really want to recompile GPG, you can do so')
@@ -1115,7 +1117,7 @@ def main():
 					sout, serr = pid.communicate()
 
 					if pid.returncode != 0:
-						print('Error.  There was an error while configuring libgcrypt. You might ')
+						print('Error.  There was an error while making libgcrypt. You might ')
 						print('need to install a dependency.')
 						if serr is not None:
 							input('Press a key to see stderr error message...')
@@ -1126,6 +1128,46 @@ def main():
 		#####  --------------------------------------------------- ####
 		#####  --------------------------------------------------- ####
 		#####  --------------------------------------------------- ####
+		# install natmsgv (server verifivation programs)
+		err_nbr, proj_subdir = install_targz_py(wrk_dir, url_natmsgv_gz, 'natmsgv',
+			False, False)
+		if err_nbr != 0:
+			# Error/warning
+			print('Error.  There was an error intalling the serverv verification tar.gz ' \
+			+ 'file: ' + str(err_nbr))
+		else:
+			print('The natmsgv server verification program source code was downloaded OK.')
+			# run make and install
+			pid = None
+			pid = subprocess.Popen(['make', 'nm_verify'], stdout=subprocess.PIPE,
+				stdin=subprocess.PIPE, stderr=subprocess.PIPE, \
+				cwd=os.path.join(wrk_dir, 'natmsgv'))
+
+			sout, serr = pid.communicate()
+
+			if pid.returncode != 0:
+				print('Error.  There was an error while making natmsgv. You might ')
+				print('need to install a dependency.')
+				if serr is not None:
+					input('Press a key to see stderr error message...')
+					print(str(serr))
+					input('Press a key to continue ...')
+			else:
+				# install it
+				pid = None
+				pid = subprocess.Popen(['make', 'install'], stdout=subprocess.PIPE,
+					stdin=subprocess.PIPE, stderr=subprocess.PIPE, \
+					cwd=os.path.join(wrk_dir, 'natmsgv'))
+
+				sout, serr = pid.communicate()
+
+				if pid.returncode != 0:
+					print('Error.  There was an error while installing nm_verify. You might ')
+					print('need to install a dependency.')
+					if serr is not None:
+						input('Press a key to see stderr error message...')
+						print(str(serr))
+						input('Press a key to continue ...')
 
 	return(0)
 ######################################################################
