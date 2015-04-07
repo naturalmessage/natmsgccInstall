@@ -91,6 +91,26 @@ url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz
 url_natmsgv_gz = 'https://github.com/naturalmessage/natmsgv/archive/master.tar.gz'
 
 
+def nm_popen(cmd_list, wrk_dir):
+	"""
+	Run subprocess.Popen with some error checking.
+	"""
+	pid = subprocess.Popen(cmd_list,
+		stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+		stderr=subprocess.PIPE, cwd=wrk_dir)
+
+	sout, serr = pid.communicate()
+
+	if pid.returncode != 0:
+		print('Error.  There was an error while running ' + str(cmd_list[0]) \
+			+ 'in directory: ' + wrk_dir + '.  You might need to install a dependency.')
+		if serr is not None:
+			input('Press a key to see stderr error message...')
+			print(str(serr))
+			input('Press a key to continue ...')
+		return(59349)
+
+	return(0)
 
 
 ######################################################################
@@ -236,18 +256,14 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	
 	
 	if run_build:
-		pid = subprocess.Popen([sys.executable, 'setup.py', 'install'], 
-			cwd=proj_subdir)
-
-		if(pid.wait() != 0):
+		rc = nm_popen([sys.executable, 'setup.py', 'install'], proj_subdir)
+		if rc != 0:
 			print('Error, the build failed for ' + proj_name)
 			return((87, None))
 
 	if run_setup:
-		pid = subprocess.Popen([sys.executable, 'setup.py', 'install'], 
-			cwd=proj_subdir)
-
-		if(pid.wait() != 0):
+		rc = nm_popen([sys.executable, 'setup.py', 'install'], proj_subdir)
+		if rc != 0:
 			print('Error, the install failed for ' + proj_name)
 			print('You probably need to run this under the root user ID.')
 			return((88, None))
@@ -417,6 +433,10 @@ def nm_install_package(package_name, os_name=None,
 
 	# for each package name, provide a list of system names
 	# and packages, along with a default value for each package name.
+
+	# The errors on freebsd related to libint and dgettext
+	# are due to internationalizeion and the lack of glibc
+	# https://www.gnu.org/software/gettext/FAQ.html.
 	package_dict = { \
 	'python3': {'opensuse': 'python3-devel', 
 		'trisquel': 'python3-dev',
@@ -427,7 +447,9 @@ def nm_install_package(package_name, os_name=None,
 	  'gentoo base system': 'dev-lang/python',
   	'gentoo': 'dev-lang/python',
 		'default': 'python3-dev'},
-	'gcc': {'default': 'gcc'},
+	'gettext-lint': {'default', 'gettext-lint'},
+	'gcc': {'freebsd': 'gcc48',
+		'default': 'gcc'},
 	'python3-setuptools': {'opensuse': 'python3-setuptools', 
 		'freebsd': 'py34-setuptools34',
 		'openbsd': 'py3-setuptools',
@@ -457,13 +479,14 @@ def nm_install_package(package_name, os_name=None,
 	dist_name, release = get_dist_name()
 
 	if dist_name is None:
-		print('Error. Unexpected system type.  This will probably work only if the system ' \
-			+ 'name or Linux distribution name has been coded into this program, but you ' \
-			+ 'could try to set the dist_name to something similar to what it is (e.g., ' \
-			+ 'if your system is a derivative of debian, enter "debian" without the quotes).')
-		dist_name = input('Enter Ctl-c to quit or enter a distribution name if you want ' \
-			+ 'to attempt to continue (examples: debian, fedora, opensuse, freebsd, centos ' \
-			+ 'linux, openbsd): ').lower()
+		print('Error. Unexpected system type.  This will probably work only if ' \
+			+ 'the system name or Linux distribution name has been coded into ' \
+			+ 'this program, but you could try to set the dist_name to something ' \
+			+ 'similar to what it is (e.g., if your system is a derivative of ' \
+			+ 'debian, enter "debian" without the quotes).')
+		dist_name = input('Enter Ctl-c to quit or enter a distribution name ' \
+			+ 'if you want to attempt to continue (examples: debian, fedora, ' \
+			+ 'opensuse, freebsd, centos linux, openbsd): ').lower()
 		
 
 	if dist_name == 'windows':
@@ -504,18 +527,24 @@ def nm_install_package(package_name, os_name=None,
 	elif dist_name.find('gentoo') >= 0 :
 		pacmgr_name = 'emerge'
 		
-	if dist_name in ['freebsd', 'openbsd', 'gentoo base system', 'gentoo', 'arch', 'archlinux']:
+	if dist_name in ['freebsd', 'openbsd', 'gentoo base system', 
+		'gentoo', 'arch', 'archlinux']:
 		print(os.linesep)
-		print('This program will install several binary packages using a binary package manager')
+		print('This program will install several binary packages using '
+			+ 'a binary package manager')
 		print('such as pkg_add, pkg, emerge, or pacman.')
-		print('If you you do not want to install binary pacakges (if you prefer to install from source)')
+		print('If you you do not want to install binary pacakges (if you ' \
+			+ 'prefer to install from source)')
 		input('then quit now or press ENTER to continue...')
 
-	if dist_name in ['freebsd']:
+	if dist_name in ['openbsd']:
 		if os.getenv('PKG_PATH') is None:
+			# switch openBSD to ports install if they work
 			print('')
 			print('WARNING. The PKG_PATH environment variable is not set.')
-			print('This might cause the pkg_add command to fail.')
+			print('If you know that you can install packages using pkg, ')
+			print('then you can ignore this warning, otherwise, the missing path')
+			print('cmight ause the pkg command to fail.')
 			print('You could try setting the variable and then restarting')
 			print('this program:')
 			print('   export  PKG_PATH=ftp://ftp.openbsd.org/pub/OpenBSD/5.6/packages/`machine -a`/')
@@ -527,6 +556,15 @@ def nm_install_package(package_name, os_name=None,
 		# change to debug_msg()
 		print('Initial pacmgr name based on distribution name: ' + str(pacmgr_name))
 	
+	# add check for ports for freebsd (and later, for openbsd and others):
+	# add check for ports for freebsd (and later, for openbsd and others):
+	# add check for ports for freebsd (and later, for openbsd and others):
+	# add check for ports for freebsd (and later, for openbsd and others):
+	# add check for ports for freebsd (and later, for openbsd and others):
+	
+
+
+
 	my_paths=['/usr/local/bin', '/usr/sbin', '/opt/local/bin', 
 		'/usr/share/bin', '/usr/local/share/pcbsd/bin']
 	defpath = os.defpath.split(':')
@@ -761,7 +799,7 @@ def main():
 				sys.exit(9485)
 				
 				
-			# run the install
+			# Run the install
 			rc = 0
 			xid = subprocess.Popen([run_fname])
 			rc = xid.wait()
@@ -787,18 +825,21 @@ def main():
 		dist_name, release = get_dist_name()
 		if dist_name not in ['openbsd']:
 			# openbsd does not need an install.
-			if not os.path.isfile('/usr/bin/make') and not os.path.isfile('/usr/local/bin/make'):
-			# Trisquel 7 mini did not have make!
+			if not os.path.isfile('/usr/bin/make') \
+				and not os.path.isfile('/usr/local/bin/make'):
+				# Trisquel 7 mini did not have make!
 				nm_install_package('make')
 
 		# I need the development version of python with the proper C headers
 		# to compile pycrypto
-		if dist_name not in ['openbsd']:
+		if dist_name not in ['openbsd', 'freebsd']:
 			# openbsd does not have a special 'development' version	
 			# of python
 			nm_install_package('python3') # the exact pkg name is transliated by the func.
 
-		# setuptools is needed before I can run other python installs
+		# setuptools is needed before I can run other python installs.
+		# I did not find setuptools in FreeBSD ports, so I will install
+		# it via pkg.
 		need_download = False
 		try:
 			import setuptools
@@ -818,9 +859,15 @@ def main():
 				print('from source.')
 				input('Press ENTER to exit...')
 				sys.exit(12)
+			elif distname == 'freebsd':
+				# use the ports tree... espcially for libgcrypt
+				print('The FreeBSD setup requires that you have your ports tree installed.')
+				if os.path.isdir('/usr/ports/security/libgcrypt')
 			elif dist_name in ['mageia', 'mandriva']:
 				print("Installing setuptools (ez_setup) from source")
 				print("because Mageia does not have an RPM for it.")
+				print('A test of Mageia in early 2015 showed that it had an old')
+				print('of openssl that is incompatible with this setup routine.')
 				##wget https://bootstrap.pypa.io/ez_setup.py
 				dat = https_download(the_url='https://bootstrap.pypa.io/ez_setup.py')
 				if dat is None:
@@ -847,15 +894,20 @@ def main():
 				rc = nm_install_package('python3-setuptools')
 				if rc != 0:
 					input('The installation of python setuptools failed.  This will ' \
-						+ 'adversely affect ' \
-						+ 'installation of the Natural Message command line client.  You can try ' \
-						+ 'to install Python setuptools using your package manager and then rerun ' \
+						+ 'adversely affect installation of the Natural Message command ' \
+						+ 'line client.  You can try to install Python setuptools ' \
+						+ 'using your package manager and then rerun ' \
 						+ 'NatMsgInstall.\n\nThe error code was: ' + repr(rc))
 
-		if not os.path.isfile('/usr/bin/gcc') and not os.path.isfile('/usr/local/bin/gcc'):
+		if not os.path.isfile('/usr/bin/gcc') \
+		and not os.path.isfile('/usr/local/bin/gcc') \
+		and distname != 'freebsd':
+			# bsd has gcc48 (or similar version), not gcc
 			nm_install_package('gcc')
 
-		if not os.path.isfile('/usr/bin/unrtf') and not os.path.isfile('/usr/local/bin/unrtf'):
+		if not os.path.isfile('/usr/bin/unrtf') \
+		and not os.path.isfile('/usr/local/bin/unrtf') \
+		and dist_name != 'freebsd':
 			nm_install_package('unrtf') # removes rtf code for command line viewing
 
 
@@ -904,21 +956,33 @@ def main():
 	# get the fresh installer to faciliate running the latest install:
 	steps.append([os.curdir, url_natmsgccInstall, 'natmsgccInstall', False, False])
 
-	step_nbr = 1 #1-based step number
-	for opts in steps:
-		err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
-			run_setup=opts[3], run_build=opts[4])
-		if err_nbr != 0:
-			# Error/warning
-			print('WARNING.  There was an error intalling a tar.gz ' \
-			+ 'file: ' + str(err_nbr))
-			junk = input('Press ENTER to try the next step...')
-			##sys.exit(12)
-		else:
-			if opts[2].lower() == 'rncryptor':
-				save_rncryptor_subdir = proj_subdir
+	# 
+	if dist_name == 'freebsd':
+		# run ports install for textproc/unrtf, libgcrypt, gpg-error
+		nm_popen(['make'], '/usr/ports/textproc/unrtf')
+		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf')
 
-		step_nbr += 1
+		nm_popen(['make'], '/usr/ports/security/gpg-error')
+		nm_popen(['make', 'install'], '/usr/ports/security/gpg-error')
+
+		nm_popen(['make'], '/usr/ports/security/libgcrypt')
+		nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt')
+	else:
+		step_nbr = 1 #1-based step number
+		for opts in steps:
+			err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
+				run_setup=opts[3], run_build=opts[4])
+			if err_nbr != 0:
+				# Error/warning
+				print('WARNING.  There was an error intalling a tar.gz ' \
+				+ 'file: ' + str(err_nbr))
+				junk = input('Press ENTER to try the next step...')
+				##sys.exit(12)
+			else:
+				if opts[2].lower() == 'rncryptor':
+					save_rncryptor_subdir = proj_subdir
+
+			step_nbr += 1
 
 	#### I put RNCryptor inside natmsg
 	### # To do: move the file to the official NaturalMessage python directory
@@ -997,7 +1061,8 @@ def main():
 	# download and install libgcrypt and libgpg-error as dependencies
 	# of the Natural Message Server Verification programs (natmsgv
 	# from https://github/naturalmessage/natmsgv)
-	if platform.system().lower() != 'windows':
+	# Do not run this for FreeBSD, because I will use the ports tree.
+	if platform.system().lower() != 'windows' and dist_name !='freebsd':
 		#####  CONTINUING FOR NON-WINDOWS ONLY...                  ####
 		#####  Download, configure, make, and install libgpg-error ####
 		if os.path.isfile('/usr/local/lib/libgpg-error.a'):
@@ -1014,36 +1079,21 @@ def main():
 				# configure
 				### cd proj_dir
 				print('Configuring libgpg_error...')
-				pid = subprocess.Popen(['./configure', '--enable-static', 
-					'--disable-shared', '--prefix=/usr/local'], 
-					stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
-					stderr=subprocess.PIPE, cwd=proj_dir)
+				rc = nm_open(['./configure', '--enable-static', 
+					'--disable-shared', '--prefix=/usr/local'], proj_dir)
 			
-				sout, serr = pid.communicate()
-			
-				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgpg_error. ' \
+				if rc != 0:
+					input('Error.  There was an error while configuring libgpg_error. ' \
 						+ 'You might need to install a dependency.')
-					print('It is generally safe to rerun this install script.')
-					if serr is not None:
-						input('Press a key to see stderr error message...')
-						print(str(serr))
-						input('Press a key to continue ...')
 			
 				# make
 				print('Making libgpg_error...')
 				pid = None
-				pid = subprocess.Popen(['make'], stdout=subprocess.PIPE,
-					stdin=subprocess.PIPE, stderr=subprocess.PIPE, cwd=proj_dir)
+				rc = nm_popen(['make'], cwd=proj_dir)
 			
-				sout, serr = pid.communicate()
-				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgpg_error. You might ')
-					print('need to install a dependency.')
-					if serr is not None:
-						input('Press a key to see stderr error message...')
-						print(str(serr))
-						input('Press a key to continue ...')
+				if rc != 0:
+					input('Error.  There was an error while configuring libgpg_error. You might ' \
+						+ 'need to install a dependency.')
 			
 				## # make install
 				print('The libgpg-error modules are needed by the libgcrypt module.')
@@ -1051,8 +1101,11 @@ def main():
 				if yn.lower() in ['y', 'yes']:
 					pid = None
 					print('Installing libgpg_error...')
-					sout, serr = subprocess.Popen(['make', 'install'], stdout=subprocess.PIPE,
-						stdin=subprocess.PIPE, stderr=subprocess.PIPE, cwd=proj_dir).communicate()
+					rc = nm_popen(['make', 'install'], proj_dir)
+					if rc != 0:
+						print('The installation of libgpg_error failed.')
+						input('Libgcrypt will not install without this.')
+						return(4837434)
 				else:
 					print('Skipping the final installation for libgpg-error.')
 			
@@ -1073,46 +1126,27 @@ def main():
 				print('Configuring libgcrypt...')
 				# The next command defines the command and gets an id
 				# for it.
-				pid = subprocess.Popen(['./configure', '--enable-static', 
+				rc = nm_popen(['./configure', '--enable-static', 
 					'--disable-shared',
 					'--with-gpg-error-prefix=/usr/local',
-					'--prefix=/usr/local'], 
-					stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
-					stderr=subprocess.PIPE, cwd=proj_dir)
+					'--prefix=/usr/local'], proj_dir)
 			
-				# The next command actually gets the output from
-				# the command:
-				sout, serr = pid.communicate()
-			
-				if pid.returncode != 0:
-					print('Error.  There was an error while configuring libgpgcrypt. ' \
+				if rc != 0:
+					input('Error.  There was an error while configuring libgpgcrypt. ' \
 						+ ' You might need to install a dependency.')
-					if serr is not None:
-						input('Press a key to see stderr error message...')
-						print(str(serr))
-						input('Press a key to continue ...')
 			
 				# make
 				print('Making libgcrypt...')
-				pid = None
-				pid = subprocess.Popen(['make'], stdout=subprocess.PIPE,
-					stdin=subprocess.PIPE, stderr=subprocess.PIPE, cwd=proj_dir)
+				rc = nm_popen(['make'], proj_dir)
 			
-				sout, serr = pid.communicate()
-				if pid.returncode != 0:
-					print('Error.  There was an error while making libgcrypt.')
-					if serr is not None:
-						input('Press a key to see stderr error message...')
-						print(str(serr))
-						input('Press a key to continue ...')
+				if rc != 0:
+					input('Error.  There was an error while making libgcrypt.')
 			
 				# make install
 				yn = input('Do you want to install the libgcrypt programs now? (y/n): ')
 				if yn.lower() in ['y', 'yes']:
-					pid = None
 					print('Installing libgpg_error...')
-					pid = subprocess.Popen(['make', 'install'], stdout=subprocess.PIPE,
-						stdin=subprocess.PIPE, stderr=subprocess.PIPE, cwd=proj_dir)
+					rc = nm_popen(['make', 'install'], proj_dir)
 
 					sout, serr = pid.communicate()
 
@@ -1129,7 +1163,7 @@ def main():
 		#####  --------------------------------------------------- ####
 		#####  --------------------------------------------------- ####
 		# install natmsgv (server verifivation programs)
-		err_nbr, proj_subdir = install_targz_py(wrk_dir, url_natmsgv_gz, 'natmsgv',
+		err_nbr, proj_subdir = install_targz_py(wrk_dir, url_natmsgv_gz, 'natmsgv-master',
 			False, False)
 		if err_nbr != 0:
 			# Error/warning
@@ -1138,36 +1172,18 @@ def main():
 		else:
 			print('The natmsgv server verification program source code was downloaded OK.')
 			# run make and install
-			pid = None
-			pid = subprocess.Popen(['make', 'nm_verify'], stdout=subprocess.PIPE,
-				stdin=subprocess.PIPE, stderr=subprocess.PIPE, \
-				cwd=os.path.join(wrk_dir, 'natmsgv'))
+			rc = nm_popen(['make', 'nm_verify'], os.path.join(wrk_dir, 'natmsgv-master'))
 
-			sout, serr = pid.communicate()
-
-			if pid.returncode != 0:
-				print('Error.  There was an error while making natmsgv. You might ')
-				print('need to install a dependency.')
-				if serr is not None:
-					input('Press a key to see stderr error message...')
-					print(str(serr))
-					input('Press a key to continue ...')
+			if rc != 0:
+				input('Error.  There was an error while making natmsgv. You might ' \
+					+ 'need to install a dependency.')
 			else:
 				# install it
-				pid = None
-				pid = subprocess.Popen(['make', 'install'], stdout=subprocess.PIPE,
-					stdin=subprocess.PIPE, stderr=subprocess.PIPE, \
-					cwd=os.path.join(wrk_dir, 'natmsgv'))
+				rc = nm_popen(['make', 'install'], os.path.join(wrk_dir, 'natmsgv-master'))
 
-				sout, serr = pid.communicate()
-
-				if pid.returncode != 0:
-					print('Error.  There was an error while installing nm_verify. You might ')
-					print('need to install a dependency.')
-					if serr is not None:
-						input('Press a key to see stderr error message...')
-						print(str(serr))
-						input('Press a key to continue ...')
+				if rc != 0:
+					input('Error.  There was an error while installing nm_verify. You might ' \
+						+ 'need to install a dependency.')
 
 	return(0)
 ######################################################################
