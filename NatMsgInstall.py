@@ -861,14 +861,17 @@ def main():
 				sys.exit(12)
 			elif distname == 'freebsd':
 				# use the ports tree... especially for libgcrypt
-				if not os.path.isdir('/usr/ports/security/libgcrypt'):
-					print('The FreeBSD setup requires that you have your ports tree installed.')
-					print('You might try something like this: ')
-					print('  cd /usr/var/portsnap')
-					print('  portsnap fetch')
-					print('  portsnap install')
-					print('then try the Natural Message installer again.')
-					sys.exit(19)
+	
+				if not os.path.isdir('/usr/local/lib/libgcrypt.so'):
+					if not os.path.isdir('/usr/ports/security/libgcrypt'):
+						print('The FreeBSD setup requires that you either have a current version ')
+						print('of libgcrypt or you have your ports tree installed.')
+						print('You might try something like this to install the ports tree (as root):')
+						print('  cd /usr/var/portsnap')
+						print('  portsnap fetch')
+						print('  portsnap install')
+						print('then try the Natural Message installer again.')
+						sys.exit(19)
 			elif dist_name in ['mageia', 'mandriva']:
 				print("Installing setuptools (ez_setup) from source")
 				print("because Mageia does not have an RPM for it.")
@@ -969,7 +972,7 @@ def main():
 		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf')
 
 		nm_popen(['make'], '/usr/ports/security/libgpg-error')
-		nm_popen(['make', 'install'], '/usr/ports/security/gpg-error')
+		nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error')
 
 		nm_popen(['make'], '/usr/ports/security/libgcrypt')
 		nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt')
@@ -1168,7 +1171,7 @@ def main():
 		#####  --------------------------------------------------- ####
 		#####  --------------------------------------------------- ####
 		#####  --------------------------------------------------- ####
-		# install natmsgv (server verifivation programs)
+		# Install natmsgv (server verification programs)
 		err_nbr, proj_subdir = install_targz_py(wrk_dir, url_natmsgv_gz, 'natmsgv-master',
 			False, False)
 		if err_nbr != 0:
