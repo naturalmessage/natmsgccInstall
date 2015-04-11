@@ -860,9 +860,15 @@ def main():
 				input('Press ENTER to exit...')
 				sys.exit(12)
 			elif distname == 'freebsd':
-				# use the ports tree... espcially for libgcrypt
-				print('The FreeBSD setup requires that you have your ports tree installed.')
-				if os.path.isdir('/usr/ports/security/libgcrypt')
+				# use the ports tree... especially for libgcrypt
+				if not os.path.isdir('/usr/ports/security/libgcrypt'):
+					print('The FreeBSD setup requires that you have your ports tree installed.')
+					print('You might try something like this: ')
+					print('  cd /usr/var/portsnap')
+					print('  portsnap fetch')
+					print('  portsnap install')
+					print('then try the Natural Message installer again.')
+					sys.exit(19)
 			elif dist_name in ['mageia', 'mandriva']:
 				print("Installing setuptools (ez_setup) from source")
 				print("because Mageia does not have an RPM for it.")
