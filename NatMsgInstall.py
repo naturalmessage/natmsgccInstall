@@ -103,7 +103,7 @@ def nm_popen(cmd_list, wrk_dir):
 
 	if pid.returncode != 0:
 		print('Error.  There was an error while running ' + str(cmd_list[0]) \
-			+ 'in directory: ' + wrk_dir + '.  You might need to install a dependency.')
+			+ ' in directory: ' + wrk_dir + '.  You might need to install a dependency.')
 		if serr is not None:
 			input('Press a key to see stderr error message...')
 			print(str(serr))
@@ -968,7 +968,7 @@ def main():
 		nm_popen(['make'], '/usr/ports/textproc/unrtf')
 		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf')
 
-		nm_popen(['make'], '/usr/ports/security/gpg-error')
+		nm_popen(['make'], '/usr/ports/security/libgpg-error')
 		nm_popen(['make', 'install'], '/usr/ports/security/gpg-error')
 
 		nm_popen(['make'], '/usr/ports/security/libgcrypt')
