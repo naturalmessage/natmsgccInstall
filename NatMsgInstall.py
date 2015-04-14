@@ -1168,9 +1168,14 @@ def main():
 							input('Press a key to continue ...')
 				else:
 					print('Skipping the final installation for libgcrypt.')
-		#####  --------------------------------------------------- ####
-		#####  --------------------------------------------------- ####
-		#####  --------------------------------------------------- ####
+	#####  --------------------------------------------------- ####
+	#####  --------------------------------------------------- ####
+	#####  --------------------------------------------------- ####
+	if platform.system().lower() != 'windows':
+		# I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
+		# I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
+		# I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
+		# I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
 		# Install natmsgv (server verification programs)
 		err_nbr, proj_subdir = install_targz_py(wrk_dir, url_natmsgv_gz, 'natmsgv-master',
 			False, False)
@@ -1180,6 +1185,15 @@ def main():
 			+ 'file: ' + str(err_nbr))
 		else:
 			print('The natmsgv server verification program source code was downloaded OK.')
+
+			if dist_name == 'freebsd':
+				# rename the Makefile
+				mfile = os.path.join(wrk_dir, 'natmsgv-master', 'Makefile')
+				fbsd_file= os.path.join(wrk_dir, 'natmsgv-master', 'MakefileFreeBSD')
+
+				os.remove(mfile)
+				shutil.move(fbsd_file, mfile)
+
 			# run make and install
 			rc = nm_popen(['make', 'nm_verify'], os.path.join(wrk_dir, 'natmsgv-master'))
 
