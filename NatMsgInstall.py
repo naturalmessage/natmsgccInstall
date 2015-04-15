@@ -108,6 +108,7 @@ def nm_popen(cmd_list, wrk_dir):
 			+ ' in directory: ' + wrk_dir + '.  You might need to install a dependency.')
 		if serr is not None:
 			input('Press a key to see stderr error message...')
+			print(str(sout))
 			print(str(serr))
 			input('Press a key to continue ...')
 		return(59349)
@@ -566,6 +567,7 @@ def nm_install_package(package_name, os_name=None,
 	
 
 
+	# for bsd, the gcc program might not be called gcc:
 
 	my_paths=['/usr/local/bin', '/usr/sbin', '/opt/local/bin', 
 		'/usr/share/bin', '/usr/local/share/pcbsd/bin']
@@ -868,7 +870,7 @@ def main():
 				print('from source.')
 				input('Press ENTER to exit...')
 				sys.exit(12)
-			elif distname == 'freebsd':
+			elif dist_name == 'freebsd':
 				# use the ports tree... especially for libgcrypt
 	
 				if not os.path.isdir('/usr/local/lib/libgcrypt.so'):
@@ -919,9 +921,25 @@ def main():
 
 		if not os.path.isfile('/usr/bin/gcc') \
 		and not os.path.isfile('/usr/local/bin/gcc') \
-		and distname != 'freebsd':
+		and dist_name != 'freebsd':
 			# bsd has gcc48 (or similar version), not gcc
 			nm_install_package('gcc')
+
+		if not os.path.isfile('/usr/bin/gcc') \
+		and not os.path.isfile('/usr/local/bin/gcc') \
+		and dist_name == 'freebsd':
+			if not os.path.isfile('/usr/bin/gcc48') \
+			and not os.path.isfile('/usr/local/bin/gcc48') \
+				# bsd has gcc48 (or similar version), not gcc
+				nm_install_package('gcc48')
+
+			print('WARNING: I did not find the gcc program, but I will install')
+			print('gcc48 if need be.  The FreeBSD install will not create a ')
+			print('file called gcc, so you might want to create a soft link to ')
+			print('the correct version of gcc:')
+			print('  cd /usr/local/bin')
+			print('  ln -s /usr/local/bin/gcc48 gcc')
+			input('Press ENTER to continue...')
 
 		if not os.path.isfile('/usr/bin/unrtf') \
 		and not os.path.isfile('/usr/local/bin/unrtf') \
