@@ -1,6 +1,12 @@
 # This is an installation program that will download everything for
 # the Natural Message Commandline Client and attempt to install it.
 #
+# ON FREEBSD, IF PYTHON WAS NOT INSTALLED FRO SOURCE, THE FIRST MESSAGE
+# FROM PYCRYPTO WOLD BE ABOUT GMP.H.
+# add a test to check for python headers before going too far.
+# ON FREEBSD i HAD TO ADD ENVIRONMENT VAR
+#   setenv CPATH /usr/local/include
+#
 # TEMP NOTE: gcc on freebsd was named gcc48, and the version will change
 # frequently.
 # freebsd during compile, could not find libintl_dgettext.. from gettext?
@@ -93,13 +99,22 @@ url_libgcrypt_sig = 'ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-1.6.3.tar.bz
 url_natmsgv_gz = 'https://github.com/naturalmessage/natmsgv/archive/master.tar.gz'
 
 
-def nm_popen(cmd_list, wrk_dir):
+def nm_popen(cmd_list, wrk_dir, env_dict=None):
 	"""
 	Run subprocess.Popen with some error checking.
+
+	env_dict is a Python dictionary object that defines environment variables, such as:
+	{"CPATH": "/usr/local/include"}
 	"""
+	if env is None:
 	pid = subprocess.Popen(cmd_list,
 		stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
 		stderr=subprocess.PIPE, cwd=wrk_dir)
+	else:
+		pid = subprocess.Popen(cmd_list,
+			shell=True, env=env_dict,
+			stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+			stderr=subprocess.PIPE, cwd=wrk_dir)
 
 	sout, serr = pid.communicate()
 
@@ -767,9 +782,6 @@ def main():
 
 		os.makedirs(os.path.dirname(dwnld_fname), exist_ok=True)
 		if platform.system().lower() != 'windows':
-			print( '==== fixing owner for ' \
-				+ os.path.dirname(dwnld_fname))	
-
 			try:
 				shutil.chown(os.path.dirname(dwnld_fname),
 					user=pwd.getpwnam(os.getlogin()).pw_uid,
@@ -929,9 +941,9 @@ def main():
 		and not os.path.isfile('/usr/local/bin/gcc') \
 		and dist_name == 'freebsd':
 			if not os.path.isfile('/usr/bin/gcc48') \
-			and not os.path.isfile('/usr/local/bin/gcc48') \
-				# bsd has gcc48 (or similar version), not gcc
+			and not os.path.isfile('/usr/local/bin/gcc48'):
 				nm_install_package('gcc48')
+				# bsd has gcc48 (or similar version), not gcc
 
 			print('WARNING: I did not find the gcc program, but I will install')
 			print('gcc48 if need be.  The FreeBSD install will not create a ')
@@ -954,7 +966,6 @@ def main():
 	save_rncryptor_subdir = '' 
 
 
-	# Test if pycrypto is needed:
 	if not platform.system().lower() == 'windows':
 		# NOT Windows
 		need_download = False
@@ -964,10 +975,10 @@ def main():
 			need_download = True
 
 		if need_download:
-			print('I am adding pycrypto to the UNIX setup.')
+			input('I am adding pycrypto to the UNIX setup.')
 			steps.append([wrk_dir, url_pycrypto, 'pycrypto', True, True])
 		else:
-			print('The pycrypto library is already installed.')
+			input('The pycrypto library is already installed.')
 
 		# Test if requests is needed
 		need_download = False
@@ -995,30 +1006,32 @@ def main():
 	# 
 	if dist_name == 'freebsd':
 		# run ports install for textproc/unrtf, libgcrypt, gpg-error
-		nm_popen(['make'], '/usr/ports/textproc/unrtf')
-		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf')
+		nm_popen(['make'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
+		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
 
-		nm_popen(['make'], '/usr/ports/security/libgpg-error')
-		nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error')
+		nm_popen(['make'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
+		nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
 
-		nm_popen(['make'], '/usr/ports/security/libgcrypt')
-		nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt')
-	else:
-		step_nbr = 1 #1-based step number
-		for opts in steps:
-			err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
-				run_setup=opts[3], run_build=opts[4])
-			if err_nbr != 0:
-				# Error/warning
-				print('WARNING.  There was an error intalling a tar.gz ' \
-				+ 'file: ' + str(err_nbr))
-				junk = input('Press ENTER to try the next step...')
-				##sys.exit(12)
-			else:
-				if opts[2].lower() == 'rncryptor':
-					save_rncryptor_subdir = proj_subdir
+		nm_popen(['make'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
+		nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
 
-			step_nbr += 1
+	# Continuing for all NON-Windows
+	step_nbr = 1 #1-based step number
+	for opts in steps:
+		err_nbr, proj_subdir = install_targz_py(opts[0], opts[1], opts[2], 
+			run_setup=opts[3], run_build=opts[4])
+
+		if err_nbr != 0:
+			# Error/warning
+			print('WARNING.  There was an error installing a tar.gz ' \
+			+ 'file: ' + str(err_nbr))
+			junk = input('Press ENTER to try the next step...')
+			##sys.exit(12)
+		else:
+			if opts[2].lower() == 'rncryptor':
+				save_rncryptor_subdir = proj_subdir
+
+		step_nbr += 1
 
 	#### I put RNCryptor inside natmsg
 	### # To do: move the file to the official NaturalMessage python directory
@@ -1070,17 +1083,21 @@ def main():
 				owner_id_alpha = input('Enter the user ID that you want to be ' \
 					+ 'the owner of your mail directory: ')
 
-				owner_numeric_id = pwd.getpwnam(owner_id_alpha).pw_uid
-				owner_gid = pwd.getpwnam(owner_id_alpha).pw_gid
+				try:
+					owner_numeric_id = pwd.getpwnam(owner_id_alpha).pw_uid
+					owner_gid = pwd.getpwnam(owner_id_alpha).pw_gid
+				except:
+					pass
 			else:
-				owner_numeric_id = pwd.getpwnam(os.getlogin()).pw_uid
-				owner_gid = pwd.getpwnam(os.getlogin()).pw_gid
+				try:
+					owner_numeric_id = pwd.getpwnam(os.getlogin()).pw_uid
+					owner_gid = pwd.getpwnam(os.getlogin()).pw_gid
+				except:
+					pass
 
 
 			for root, dirs, files in os.walk(wrk_dir):
 				# Fix directory owner
-				print( '==== fixing owner for directory ' \
-						+ root + '. the dirs are ' + str(dirs))
 				try:
 					shutil.chown(root, 
 						user=owner_numeric_id,
