@@ -106,10 +106,10 @@ def nm_popen(cmd_list, wrk_dir, env_dict=None):
 	env_dict is a Python dictionary object that defines environment variables, such as:
 	{"CPATH": "/usr/local/include"}
 	"""
-	if env is None:
-	pid = subprocess.Popen(cmd_list,
-		stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
-		stderr=subprocess.PIPE, cwd=wrk_dir)
+	if env_dict is None:
+		pid = subprocess.Popen(cmd_list,
+			stdout=subprocess.PIPE, stdin=subprocess.PIPE, 
+			stderr=subprocess.PIPE, cwd=wrk_dir)
 	else:
 		pid = subprocess.Popen(cmd_list,
 			shell=True, env=env_dict,
@@ -214,9 +214,7 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	# had bad ssl according to my FreeBSD VM.
 	##u = request.urlopen(targz_url)
 
-	print('once test')
 	dat = https_download(targz_url)
-	print('once test B')
 	#### context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 	#### context.check_hostname = False
 	#### context.verify_mode = ssl.CERT_NONE
@@ -725,7 +723,19 @@ def main():
 				sys.exit(48)
 
 
-	wrk_dir = os.path.expanduser(os.path.join('~' , 'natmsg' ,'natmsginst'))
+	home_dir = None
+	if os.getlogin() == 'root':
+		good = False
+		while not good:
+			print('You are running as root.')
+			home_dir = input('Enter the full path to the user\'s home directory where you want to install the Natural Message mail directory (must be in the home directory): ')
+	else:
+		home_dir = os.path.expanduser(os.path.join('~' , 'natmsg' ,'natmsginst'))
+
+	wrk_dir = os.path.expanduser(os.path.join(home_dir , 'natmsg' ,'natmsginst'))
+
+	input('=== once, homedir is ' + home_dir + ' and wrkdir is ' + wrk_dir)
+
 	os.makedirs(wrk_dir, exist_ok=True, mode=0o700)
 	if platform.system().lower() != 'windows':
 		# Change the owner of the directory.  The Install might be
@@ -882,19 +892,6 @@ def main():
 				print('from source.')
 				input('Press ENTER to exit...')
 				sys.exit(12)
-			elif dist_name == 'freebsd':
-				# use the ports tree... especially for libgcrypt
-	
-				if not os.path.isdir('/usr/local/lib/libgcrypt.so'):
-					if not os.path.isdir('/usr/ports/security/libgcrypt'):
-						print('The FreeBSD setup requires that you either have a current version ')
-						print('of libgcrypt or you have your ports tree installed.')
-						print('You might try something like this to install the ports tree (as root):')
-						print('  cd /usr/var/portsnap')
-						print('  portsnap fetch')
-						print('  portsnap install')
-						print('then try the Natural Message installer again.')
-						sys.exit(19)
 			elif dist_name in ['mageia', 'mandriva']:
 				print("Installing setuptools (ez_setup) from source")
 				print("because Mageia does not have an RPM for it.")
@@ -978,7 +975,7 @@ def main():
 			input('I am adding pycrypto to the UNIX setup.')
 			steps.append([wrk_dir, url_pycrypto, 'pycrypto', True, True])
 		else:
-			input('The pycrypto library is already installed.')
+			input('+++++++++ The pycrypto library is already installed.')
 
 		# Test if requests is needed
 		need_download = False
@@ -993,7 +990,7 @@ def main():
 			###steps.extend([[wrk_dir, url_requests, 'requests', True, False],
 			###	[wrk_dir, url_rncryptor, 'rncryptor', False, False]])
 		else:
-			print('The Python requests library is already installed.')
+			print('+++++++++ The Python requests library is already installed.')
 
 	##### now running for all OS
 	# always download a fresh natmsgcc from github, but
@@ -1010,20 +1007,20 @@ def main():
 			nm_popen(['make'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
 			nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
 		else:
-			print('A version of unrtf is already installed')
+			print('+++++++++ A version of unrtf is already installed')
 
 
 		if not os.path.isfile('/usr/local/lib/libgpg-error.so') and not os.path.isfile('/usr/lib/libgpg-error.so'): 
 			nm_popen(['make'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
 			nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
 		else:
-			print('A version of gpg-error is already installed')
+			print('+++++++++ A version of gpg-error is already installed')
 
 		if not os.path.isfile('/usr/local/lib/libgcrypt.so') and not os.path.isfile('/usr/lib/libgcrypt.so'): 
 			nm_popen(['make'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
 			nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
 		else:
-			print('A version of libgcrypt is already installed')
+			print('+++++++++ A version of libgcrypt is already installed')
 
 	# Continuing for all NON-Windows
 	step_nbr = 1 #1-based step number
@@ -1100,19 +1097,17 @@ def main():
 				except:
 					pass
 			else:
-				try:
-					owner_numeric_id = pwd.getpwnam(os.getlogin()).pw_uid
-					owner_gid = pwd.getpwnam(os.getlogin()).pw_gid
-				except:
-					pass
+				owner_id_alpha = os.getlogin()
 
 
 			for root, dirs, files in os.walk(wrk_dir):
 				# Fix directory owner
 				try:
+					# I am changing only the user (not group)
+					# due to problems gettnig accurate group
+					# nbr across platforms.
 					shutil.chown(root, 
-						user=owner_numeric_id,
-						group=owner_gid)
+						user=owner_id_alpha)
 				except:
 					chown_fail.append(root)
 
