@@ -1006,14 +1006,24 @@ def main():
 	# 
 	if dist_name == 'freebsd':
 		# run ports install for textproc/unrtf, libgcrypt, gpg-error
-		nm_popen(['make'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
-		nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
+		if not os.path.isfile('/usr/bin/unrtf') and not os.path.isfile('/usr/bin/unrtf'): 
+			nm_popen(['make'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
+		else:
+			print('A version of unrtf is already installed')
 
-		nm_popen(['make'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
-		nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
 
-		nm_popen(['make'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
-		nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
+		if not os.path.isfile('/usr/local/lib/libgpg-error.so') and not os.path.isfile('/usr/lib/libgpg-error.so'): 
+			nm_popen(['make'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
+		else:
+			print('A version of gpg-error is already installed')
+
+		if not os.path.isfile('/usr/local/lib/libgcrypt.so') and not os.path.isfile('/usr/lib/libgcrypt.so'): 
+			nm_popen(['make'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
+		else:
+			print('A version of libgcrypt is already installed')
 
 	# Continuing for all NON-Windows
 	step_nbr = 1 #1-based step number
@@ -1028,6 +1038,7 @@ def main():
 			junk = input('Press ENTER to try the next step...')
 			##sys.exit(12)
 		else:
+			print('+++++++++ ' + opts[2] + ' was installed.')
 			if opts[2].lower() == 'rncryptor':
 				save_rncryptor_subdir = proj_subdir
 
