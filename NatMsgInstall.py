@@ -729,12 +729,21 @@ def main():
 		while not good:
 			print('You are running as root.')
 			home_dir = input('Enter the full path to the user\'s home directory where you want to install the Natural Message mail directory (must be in the home directory): ')
+			if not os.path.isdir(home_dir):
+				print('That is not a directory, try again.')
+			else:
+				print('You entered: ' + home_dir)
+				yn = 'x'
+				while yn.lower() not in ['y', 'n', 'yes', 'no']:
+					yn = input('Do yo want to keep that answer? (y/n): ')
+
+				if yn in ['y', 'yes']:
+					good = True
 	else:
 		home_dir = os.path.expanduser(os.path.join('~' , 'natmsg' ,'natmsginst'))
 
 	wrk_dir = os.path.expanduser(os.path.join(home_dir , 'natmsg' ,'natmsginst'))
 
-	input('=== once, homedir is ' + home_dir + ' and wrkdir is ' + wrk_dir)
 
 	os.makedirs(wrk_dir, exist_ok=True, mode=0o700)
 	if platform.system().lower() != 'windows':
@@ -972,10 +981,10 @@ def main():
 			need_download = True
 
 		if need_download:
-			input('I am adding pycrypto to the UNIX setup.')
+			print('I am adding pycrypto to the UNIX setup.')
 			steps.append([wrk_dir, url_pycrypto, 'pycrypto', True, True])
 		else:
-			input('+++++++++ The pycrypto library is already installed.')
+			print('+++++++++ The pycrypto library is already installed.')
 
 		# Test if requests is needed
 		need_download = False
@@ -1075,7 +1084,7 @@ def main():
 				else:
 					# regular file
 					fpath = os.path.join(root, f)
-					print('checking ' + fpath)
+					## print('checking ' + fpath)
 					if os.stat(fpath).st_uid == 0:
 						root_owner_found = True
 						break
