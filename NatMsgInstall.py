@@ -65,9 +65,11 @@ import tarfile
 import zipfile
 import bz2
 
+chown_fail = []
+
 if platform.system().lower() != 'windows':
 	# load pwd only for non-windows
-	import pwd #Nat in Windows by default
+	import pwd #Not in Windows by default, not on some UN*X systems either.
 
 #url_windows_pycrypto_33 = \
 #'http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win32-py3.3.exe'
@@ -723,13 +725,16 @@ def main():
 			print('Note: unable to change the owner for ' + wrk_dir)
 			print('You can change it yourself with the chown command later.')
 		else:
-			print('==== fixing owner for ' + wrk_dir)	
-			shutil.chown(wrk_dir, 
-				user=pwd.getpwnam(os.getlogin()).pw_uid,
-				group=pwd.getpwnam(os.getlogin()).pw_gid)
-			shutil.chown(os.path.expanduser(os.path.join('~', 'natmsg')), 
-				user=pwd.getpwnam(os.getlogin()).pw_uid,
-				group=pwd.getpwnam(os.getlogin()).pw_gid)
+			try:
+				shutil.chown(wrk_dir, 
+					user=pwd.getpwnam(os.getlogin()).pw_uid,
+					group=pwd.getpwnam(os.getlogin()).pw_gid)
+				shutil.chown(os.path.expanduser(os.path.join('~', 'natmsg')), 
+					user=pwd.getpwnam(os.getlogin()).pw_uid,
+					group=pwd.getpwnam(os.getlogin()).pw_gid)
+			except:
+				chown_fail.append(wrk_dir)
+				pass
 		
 
 
@@ -763,9 +768,13 @@ def main():
 			print( '==== fixing owner for ' \
 				+ os.path.dirname(dwnld_fname))	
 
-			shutil.chown(os.path.dirname(dwnld_fname),
-				user=pwd.getpwnam(os.getlogin()).pw_uid,
-		    group=pwd.getpwnam(os.getlogin()).pw_gid)
+			try:
+				shutil.chown(os.path.dirname(dwnld_fname),
+					user=pwd.getpwnam(os.getlogin()).pw_uid,
+			    group=pwd.getpwnam(os.getlogin()).pw_gid)
+			except:
+				chown_fail.append(dwnld_fname)
+				pass
 
 		# add test here to see if Crypto is available
 		need_download = False
@@ -1054,15 +1063,22 @@ def main():
 				# Fix directory owner
 				print( '==== fixing owner for directory ' \
 						+ root + '. the dirs are ' + str(dirs))
-				shutil.chown(root, 
-					user=owner_numeric_id,
-			group=owner_gid)
+				try:
+					shutil.chown(root, 
+						user=owner_numeric_id,
+						group=owner_gid)
+				except:
+					chown_fail.append(root)
+
 				for f in files:
 					# Fix regular file owner
 					fpath = os.path.join(root, f)
-					shutil.chown(fpath, 
-						user=owner_numeric_id,
-						group=owner_gid)
+					try:
+						shutil.chown(fpath, 
+							user=owner_numeric_id,
+							group=owner_gid)
+					except:
+						chown_fail.append(root)
 
 
 	###########################################################################
@@ -1208,6 +1224,13 @@ def main():
 					input('Error.  There was an error while installing nm_verify. You might ' \
 						+ 'need to install a dependency.')
 
+	if len(chown_fail) > 0:
+		print('There was a problem trying to fix the ownership of ')
+		print('one or more directories.')
+		print('You can fix them from the command line when you know')
+		print('which user you want to own it.')
+		for f in chown_fail:
+			print(f)
 	return(0)
 ######################################################################
 ######################################################################
