@@ -273,16 +273,23 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 	
 	if run_build:
 		rc = nm_popen([sys.executable, 'setup.py', 'install'], proj_subdir)
-		if rc != 0:
+		if rc is None:
+			print('Error, the build failed for ' + proj_name)
+			return((86, None))
+		elif rc != 0:
 			print('Error, the build failed for ' + proj_name)
 			return((87, None))
 
 	if run_setup:
 		rc = nm_popen([sys.executable, 'setup.py', 'install'], proj_subdir)
-		if rc != 0:
+		if rc is None:
 			print('Error, the install failed for ' + proj_name)
 			print('You probably need to run this under the root user ID.')
 			return((88, None))
+		elif rc != 0:
+			print('Error, the install failed for ' + proj_name)
+			print('You probably need to run this under the root user ID.')
+			return((89, None))
 
 	return((0, proj_subdir))
 
@@ -447,12 +454,13 @@ def nm_install_package(package_name, os_name=None,
 	The default package names have not been tested on all platforms.
 	"""
 
-	# for each package name, provide a list of system names
-	# and packages, along with a default value for each package name.
-
-	# The errors on freebsd related to libint and dgettext
+	# The errors on freebsd during manual compale of libcrypt 
+	# related to libint and dgettext
 	# are due to internationalizeion and the lack of glibc
 	# https://www.gnu.org/software/gettext/FAQ.html.
+
+	# package_dict translate a 'generic package name' into the specifid
+	# name used by the package manager for that system.
 	package_dict = { \
 	'python3': {'opensuse': 'python3-devel', 
 		'trisquel': 'python3-dev',
@@ -1013,21 +1021,29 @@ def main():
 	if dist_name == 'freebsd':
 		# run ports install for textproc/unrtf, libgcrypt, gpg-error
 		if not os.path.isfile('/usr/bin/unrtf') and not os.path.isfile('/usr/bin/unrtf'): 
-			nm_popen(['make'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
-			nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf', env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make'], '/usr/ports/textproc/unrtf', 
+				env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/textproc/unrtf',
+				env_dict={"CPATH":"/usr/local/include"})
 		else:
 			print('+++++++++ A version of unrtf is already installed')
 
 
-		if not os.path.isfile('/usr/local/lib/libgpg-error.so') and not os.path.isfile('/usr/lib/libgpg-error.so'): 
-			nm_popen(['make'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
-			nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error', env_dict={"CPATH":"/usr/local/include"})
+		if not os.path.isfile('/usr/local/lib/libgpg-error.so') \
+		and not os.path.isfile('/usr/lib/libgpg-error.so'): 
+			nm_popen(['make'], '/usr/ports/security/libgpg-error', 
+				env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/security/libgpg-error',
+				env_dict={"CPATH":"/usr/local/include"})
 		else:
 			print('+++++++++ A version of gpg-error is already installed')
 
-		if not os.path.isfile('/usr/local/lib/libgcrypt.so') and not os.path.isfile('/usr/lib/libgcrypt.so'): 
-			nm_popen(['make'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
-			nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt', env_dict={"CPATH":"/usr/local/include"})
+		if not os.path.isfile('/usr/local/lib/libgcrypt.so') \
+		and not os.path.isfile('/usr/lib/libgcrypt.so'): 
+			nm_popen(['make'], '/usr/ports/security/libgcrypt',
+				env_dict={"CPATH":"/usr/local/include"})
+			nm_popen(['make', 'install'], '/usr/ports/security/libgcrypt',
+				env_dict={"CPATH":"/usr/local/include"})
 		else:
 			print('+++++++++ A version of libgcrypt is already installed')
 
@@ -1154,7 +1170,7 @@ def main():
 				# configure
 				### cd proj_dir
 				print('Configuring libgpg_error...')
-				rc = nm_open(['./configure', '--enable-static', 
+				rc = nm_popen(['./configure', '--enable-static', 
 					'--disable-shared', '--prefix=/usr/local'], proj_dir)
 			
 				if rc != 0:
@@ -1164,7 +1180,7 @@ def main():
 				# make
 				print('Making libgpg_error...')
 				pid = None
-				rc = nm_popen(['make'], cwd=proj_dir)
+				rc = nm_popen(['make'], proj_dir)
 			
 				if rc != 0:
 					input('Error.  There was an error while configuring libgpg_error. You might ' \
@@ -1223,9 +1239,7 @@ def main():
 					print('Installing libgpg_error...')
 					rc = nm_popen(['make', 'install'], proj_dir)
 
-					sout, serr = pid.communicate()
-
-					if pid.returncode != 0:
+					if rc !=0:
 						print('Error.  There was an error while making libgcrypt. You might ')
 						print('need to install a dependency.')
 						if serr is not None:
@@ -1263,7 +1277,10 @@ def main():
 			# run make and install
 			rc = nm_popen(['make', 'nm_verify'], os.path.join(wrk_dir, 'natmsgv-master'))
 
-			if rc != 0:
+			if rc is None:
+				input('Error.  There was an error while making natmsgv. You might ' \
+					+ 'need to install a dependency.')
+			elif rc != 0:
 				input('Error.  There was an error while making natmsgv. You might ' \
 					+ 'need to install a dependency.')
 			else:
@@ -1281,6 +1298,18 @@ def main():
 		print('which user you want to own it.')
 		for f in chown_fail:
 			print(f)
+
+
+	#### A user guide:
+	print('The current way to run this program is to run the launcher with your python program: ')
+	print(sys.executable + ' n.py')
+	print('')
+	print('where n.py contains two lines:')
+	print('')
+	print('from natmsgcc import natmsgcc')
+	print('natmsgcc.main()')
+	print('')
+	print('(yes, I need a better launcher.')
 	return(0)
 ######################################################################
 ######################################################################
