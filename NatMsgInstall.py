@@ -135,8 +135,7 @@ def nm_popen(cmd_list, wrk_dir, env_dict=None):
 
 ######################################################################
 def https_download(the_url):
-    """
-    Read a https web page and return the content.
+    """Read an HTTPS web page and return the content.
 
     This errs on the side of downloading the file without
     verifying the certificate due to problems on some systems
@@ -300,11 +299,9 @@ def install_targz_py(wrk_dir, targz_url, proj_name,
 
 ###############################################################################
 def download_tar_bz2(wrk_dir, tarbz_url ):
-    """
-    This will download a tar.bz2 file into the wrk_dir directory
-    and unzip it and untar it.
+    """Download a tar.bz2 file and unpack it.
 
-  This assumes that the tar file has a particular
+    This assumes that the tar file has a particular
     structure: the files are all stored in a subdirectory that
     will be listed as the first entry in the tar file and assumes
     that the filename ends in tar.bz2.
@@ -394,9 +391,10 @@ def download_tar_bz2(wrk_dir, tarbz_url ):
 
 ###############################################################################
 def get_dist_name():
-    """
-    This will return a tuple with distribution name and release number.
-    For linux, this returns the distribution name.
+    """Detect and return the distribution name and release.
+
+    This will return a tuple with distribution name (for windows, linux...)
+    and release number.  For linux, this returns the distribution name.
     the linux distribution name... always in lower case.
 
     On error, this returns the tuple (None, None)
@@ -702,7 +700,8 @@ def nm_install_package(package_name, os_name=None,
 
 
 ###############################################################################
-def  check_for_root()
+def  check_for_root():
+    """If the system is UNIX-like, see if the user is root."""
     if platform.system().lower() == 'windows':
         try:
             os.system('cls')
@@ -732,6 +731,7 @@ def  check_for_root()
 
 ###############################################################################
 def get_paths():
+    """Determine the home and work directories for NatMsg."""
     # Get paths
     home_dir = None
     wrk_dir = None
@@ -769,8 +769,8 @@ def get_paths():
 
 ###############################################################################
 def create_directories(wrk_dir):
-    # Create directories, set permissions
-    chown_fail = none
+    """Create essential directories for the NatMsg client."""
+    chown_fail = None
 
     os.makedirs(wrk_dir, exist_ok=True, mode=0o700)
     if platform.system().lower() != 'windows':
@@ -802,8 +802,13 @@ def create_directories(wrk_dir):
     return(chown_fail)
 
 ###############################################################################
-def install_dependencies(url_windows_pycrypto, pycrypto_version):
-    # Install dependencies
+def install_dependencies(url_windows_pycrypto):
+    """Install dependencies.
+
+    This will perform installations that work on various platforms.
+    The main goal is to install pycrypto and unrtf.  For Windows, the
+    install process uses a binary install package for pycrypto.
+    """
     if platform.system().lower() == 'windows':
         # WINDOWS... INSTALL DEPENDENCIES
         v = sys.version.split(' ')[0].split('.') # get python version
@@ -1034,7 +1039,7 @@ def  install_important_stuff(
             print('I am adding pycrypto to the UNIX setup.')
             steps.append([wrk_dir, url_pycrypto, 'pycrypto', True, True])
         else:
-            print('+++++++++ The pycrypto library is already installed.')
+            print('+++ The pycrypto library is already installed.')
 
         # Test if requests is needed
         need_download = False
@@ -1065,6 +1070,7 @@ def  install_important_stuff(
         False])
 
     # 
+    dist_name, release = get_dist_name()
     if dist_name == 'freebsd':
         # run ports install for textproc/unrtf, libgcrypt, gpg-error
         if not os.path.isfile('/usr/bin/unrtf') \
@@ -1107,7 +1113,7 @@ def  install_important_stuff(
             junk = input('Press ENTER to try the next step...')
             ##sys.exit(12)
         else:
-            print('+++++++++ ' + opts[2] + ' was installed.')
+            print('+++ ' + opts[2] + ' was installed.')
             if opts[2].lower() == 'rncryptor':
                 save_rncryptor_subdir = proj_subdir
 
@@ -1118,6 +1124,7 @@ def  install_important_stuff(
 
 ###############################################################################
 def natmsg_fix_permissions(wrk_dir):
+    """Fix permissions on NatMsg files and directories."""
     root_owner_found = False
     # to do: confirm owner ID
     if platform.system().lower() != 'windows':
@@ -1182,9 +1189,11 @@ def natmsg_fix_permissions(wrk_dir):
 ###############################################################################
 def install_libgcrypt(
         wrk_dir,
-        proj_dir,
+        dist_name,
+        release,
         url_libgpg_error,
         url_libgcrypt):
+    """Install libgpg-error and libgcrypt."""
     # download and install libgcrypt and libgpg-error as dependencies
     # of the Natural Message Server Verification programs (natmsgv
     # from https://github/naturalmessage/natmsgv)
@@ -1295,8 +1304,8 @@ def install_libgcrypt(
 
 
 ###############################################################################
-def install_natmsgv(wrk_dir, url_natmsgv_gz):
-    #      Install natmsgv -- server verification program
+def install_natmsgv(wrk_dir, dist_name, release, url_natmsgv_gz):
+    """Install natmsgv, which is the server verification program."""
     if platform.system().lower() != 'windows':
         # I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
         # I NEED A SPECIAL SECTION FOR FREE BSD TO USE DYNAMIC LIBS
@@ -1360,6 +1369,7 @@ def main():
     check_for_root()
     home_dir, wrk_dir = get_paths()
     create_directories(wrk_dir)
+    dist_name, release = get_dist_name()
     install_dependencies(URL_WINDOWS_PYCRYPTO)
     steps = install_important_stuff(
         wrk_dir,
@@ -1368,8 +1378,8 @@ def main():
         URL_NATMSGCC,
         URL_RNCRYPTOR)
     natmsg_fix_permissions(wrk_dir)
-    install_libgcrypt(wrk_dir, proj_dir, url_libgpg_error, url_libgcrypt)
-    install_natmsgv(wrk_dir, url_natmsgv_gz)
+    install_libgcrypt(wrk_dir, dist_name, release, url_libgpg_error, url_libgcrypt)
+    install_natmsgv(wrk_dir, dist_name, release, url_natmsgv_gz)
     ###########################################################################
     ###########################################################################
     ###########################################################################
